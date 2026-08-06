@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { LogOut, Sparkles } from "lucide-react"
+import { LogOut, Flame } from "lucide-react"
 
 import { NAV_ITEMS } from "@/components/nav"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -36,11 +36,11 @@ export function AppSidebar({
       <SidebarHeader>
         <div className="flex items-center gap-2 px-1 py-1.5">
           <div className="bg-primary text-primary-foreground flex size-8 shrink-0 items-center justify-center rounded-md">
-            <Sparkles className="size-4" />
+            <Flame className="size-4" />
           </div>
           <div className="grid leading-tight group-data-[collapsible=icon]:hidden">
             <span className="truncate text-sm font-semibold">{orgName}</span>
-            <span className="text-muted-foreground text-xs">Company OS</span>
+            <span className="text-muted-foreground text-xs">ERP System</span>
           </div>
         </div>
       </SidebarHeader>
