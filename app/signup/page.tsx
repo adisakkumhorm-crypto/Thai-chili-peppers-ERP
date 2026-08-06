@@ -86,7 +86,7 @@ export default function SignupPage() {
         <CardHeader>
           <CardTitle className="text-xl">Create your account</CardTitle>
           <CardDescription>
-            Sign up for the BoomBigNose Company OS.
+            Sign up for the Thai Chili Peppers Company OS.
           </CardDescription>
         </CardHeader>
         <form onSubmit={onSubmit}>

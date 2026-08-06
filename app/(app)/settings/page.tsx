@@ -207,7 +207,7 @@ export default async function SettingsPage() {
         <CardHeader>
           <CardTitle className="text-base">Integrations</CardTitle>
           <CardDescription>
-            Connect BoomBigNose to the tools you already use.
+            Connect Thai Chili Peppers to the tools you already use.
           </CardDescription>
         </CardHeader>
         <CardContent>

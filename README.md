@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🐘 BoomBigNose Company OS
+# 🐘 Thai Chili Peppers Company OS
 
 ### ระบบปฏิบัติการธุรกิจ (Company OS) สำหรับสตูดิโอสาย AI — CRM · ดีล · โปรเจกต์ · การเงิน · ระบบอัตโนมัติ · แดชบอร์ดผู้ก่อตั้ง
 
@@ -20,14 +20,14 @@
 
 <br/>
 
-[**โรดแมป**](#-โรดแมป-roadmap) · [**เอกสาร**](./docs) · [**รายงานบั๊ก**](https://github.com/Boom-Vitt/boombignose-erp/issues) · [**ขอฟีเจอร์**](https://github.com/Boom-Vitt/boombignose-erp/issues/new)
+[**โรดแมป**](#-โรดแมป-roadmap) · [**เอกสาร**](./docs) · [**รายงานบั๊ก**](https://github.com/Boom-Vitt/thai-chili-peppers-erp/issues) · [**ขอฟีเจอร์**](https://github.com/Boom-Vitt/thai-chili-peppers-erp/issues/new)
 
 </div>
 
 <!-- แนะนำ: ใส่ภาพหน้าจอแดชบอร์ดตรงนี้ (เช่น docs/cover.png) เพื่อให้หน้า repo ดูสมบูรณ์ -->
 
 > [!NOTE]
-> BoomBigNose Company OS คือ **"ระบบปฏิบัติการของบริษัท"** ไม่ใช่ระบบบัญชี/ใบกำกับภาษีตามกฎหมาย
+> Thai Chili Peppers Company OS คือ **"ระบบปฏิบัติการของบริษัท"** ไม่ใช่ระบบบัญชี/ใบกำกับภาษีตามกฎหมาย
 > เรื่องบัญชียังคงอยู่กับ **FlowAccount / PEAK / Xero** (จะเชื่อมต่อในภายหลัง) — โปรดักต์นี้คือ *ชั้นปฏิบัติการ* ไม่ใช่ *สมุดบัญชีหลัก*
 
 ---
@@ -52,7 +52,7 @@
 
 ## 🎯 เกี่ยวกับโปรเจกต์ (About)
 
-BoomBigNose Company OS เป็น **Company OS / ERP แบบเบา ที่ออกแบบมาแนว AI-native** สำหรับสตูดิโอสาย AI education + workflow automation ในไทย (ผู้ก่อตั้ง + ทีมเล็ก) ให้ทุกอย่างของธุรกิจอยู่ในที่เดียว: ลูกค้าและดีล, การส่งมอบโปรเจกต์, เงินเข้า–ออก, คลังเทมเพลตระบบอัตโนมัติที่นำกลับมาใช้ซ้ำได้ และแดชบอร์ดที่แสดง เงินสด / burn / รายได้ / pipeline / runway
+Thai Chili Peppers Company OS เป็น **Company OS / ERP แบบเบา ที่ออกแบบมาแนว AI-native** สำหรับสตูดิโอสาย AI education + workflow automation ในไทย (ผู้ก่อตั้ง + ทีมเล็ก) ให้ทุกอย่างของธุรกิจอยู่ในที่เดียว: ลูกค้าและดีล, การส่งมอบโปรเจกต์, เงินเข้า–ออก, คลังเทมเพลตระบบอัตโนมัติที่นำกลับมาใช้ซ้ำได้ และแดชบอร์ดที่แสดง เงินสด / burn / รายได้ / pipeline / runway
 
 ออกแบบให้ **ใช้ภายในบริษัทก่อน (dogfooding)** แต่วางรากฐานให้สะอาด (`org_id` ทุกตาราง, ขอบเขตโมดูลชัดเจน) เพื่อให้ต่อยอดเป็นสินค้า **open-core (Community + Pro)** ได้โดยไม่ต้องเขียนใหม่
 
@@ -115,8 +115,8 @@ BoomBigNose Company OS เป็น **Company OS / ERP แบบเบา ที
 
 ```bash
 # 1) โคลนโปรเจกต์
-git clone https://github.com/Boom-Vitt/boombignose-erp.git
-cd boombignose-erp
+git clone https://github.com/Boom-Vitt/thai-chili-peppers-erp.git
+cd thai-chili-peppers-erp
 
 # 2) ติดตั้ง dependencies
 pnpm install
@@ -143,9 +143,9 @@ pnpm dev                 # http://localhost:3000
 
 | อีเมล | รหัสผ่าน | บทบาท |
 |---|---|---|
-| `demo@boombignose.org` | `BoomDemo123!` | owner |
-| `nattapong@boombignose.org` | `BoomDemo123!` | member |
-| `praewa@boombignose.org` | `BoomDemo123!` | member |
+| `demo@thai-chili-peppers.org` | `BoomDemo123!` | owner |
+| `nattapong@thai-chili-peppers.org` | `BoomDemo123!` | member |
+| `praewa@thai-chili-peppers.org` | `BoomDemo123!` | member |
 
 > หน้า login มีปุ่ม **"Use demo account"** กดครั้งเดียวเข้าได้เลย
 
@@ -236,7 +236,7 @@ docs/                 MVP_SPEC, ROADMAP, OPEN_CORE_STRATEGY, PDPA_SECURITY_NOTES
 
 ยินดีรับ issue และข้อเสนอแนะ! เนื่องจาก **ยังไม่ได้เลือกสัญญาอนุญาตอย่างเป็นทางการ** (ดูด้านล่าง) เราจะเปิดรับ pull request จากภายนอกหลังจากตั้งค่าไลเซนส์ + CLA เรียบร้อยแล้ว ระหว่างนี้:
 
-1. เปิด [issue](https://github.com/Boom-Vitt/boombignose-erp/issues) เพื่อคุยเรื่องบั๊กหรือฟีเจอร์ก่อน
+1. เปิด [issue](https://github.com/Boom-Vitt/thai-chili-peppers-erp/issues) เพื่อคุยเรื่องบั๊กหรือฟีเจอร์ก่อน
 2. ให้ `pnpm lint && pnpm typecheck && pnpm test && pnpm build` ผ่านทั้งหมด
 3. เขียนโค้ดให้เข้ากับสไตล์เดิม และคง business logic ที่ต้องเทสต์ให้อยู่ใน `lib/` แบบ pure
 
@@ -257,9 +257,9 @@ docs/                 MVP_SPEC, ROADMAP, OPEN_CORE_STRATEGY, PDPA_SECURITY_NOTES
 
 ทิศทางที่วางไว้คือ open-core แบบ **dual license (AGPLv3 หรือ Commercial)** — รายละเอียดที่ [`LICENSE.md`](./LICENSE.md) และ [`docs/OPEN_CORE_STRATEGY.md`](./docs/OPEN_CORE_STRATEGY.md)
 
-Copyright © 2026 BoomBigNose AI Co., Ltd.
+Copyright © 2026 Thai Chili Peppers AI Co., Ltd.
 
 <div align="center">
 <br/>
-สร้างด้วย ❤️ ที่กรุงเทพฯ — โดยทีม <b>BoomBigNose</b>
+สร้างด้วย ❤️ ที่กรุงเทพฯ — โดยทีม <b>Thai Chili Peppers</b>
 </div>

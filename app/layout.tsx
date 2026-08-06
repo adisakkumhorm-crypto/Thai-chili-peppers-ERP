@@ -16,7 +16,7 @@ const fontMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  title: "BoomBigNose Company OS",
+  title: "Thai Chili Peppers Company OS",
   description:
     "AI-native Company OS — CRM, project delivery, finance visibility, automation, and management dashboards.",
 }

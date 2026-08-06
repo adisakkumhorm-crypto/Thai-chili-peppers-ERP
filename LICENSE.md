@@ -1,6 +1,6 @@
 # License — NOT YET FINALIZED
 
-The license for BoomBigNose Company OS has **not been chosen yet**. Until the
+The license for Thai Chili Peppers Company OS has **not been chosen yet**. Until the
 founder selects one, this software is **proprietary / all rights reserved** and is
 intended for **internal use only**. Do not redistribute.
 
@@ -15,7 +15,7 @@ When the decision is made, replace this file with the chosen license text (e.g.
 the full `AGPL-3.0` text plus a `COMMERCIAL-LICENSE.md`), add SPDX headers, and
 set up a CLA before accepting external contributions.
 
-> This is not legal advice. Confirm licensing and the "BoomBigNose" trademark with
+> This is not legal advice. Confirm licensing and the "Thai Chili Peppers" trademark with
 > Thai counsel before any public release.
 
-Copyright © 2026 BoomBigNose AI Co., Ltd. All rights reserved.
+Copyright © 2026 Thai Chili Peppers AI Co., Ltd. All rights reserved.

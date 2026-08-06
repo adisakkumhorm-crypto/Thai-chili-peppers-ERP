@@ -1,4 +1,4 @@
-# MVP Spec — BoomBigNose Company OS
+# MVP Spec — Thai Chili Peppers Company OS
 
 > AI-native **Company OS** for CRM, project delivery, finance visibility,
 > automation, and management dashboards. This is the **operational layer** — not

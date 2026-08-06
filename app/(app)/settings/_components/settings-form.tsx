@@ -84,7 +84,7 @@ export function SettingsForm({
             <FormItem>
               <FormLabel>Workspace name</FormLabel>
               <FormControl>
-                <Input placeholder="BoomBigNose" {...field} />
+                <Input placeholder="Thai Chili Peppers" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>

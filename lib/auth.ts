@@ -15,7 +15,7 @@ export const getOrgContext = cache(async (): Promise<OrgContext | null> => {
   // MOCKED FOR UI INSPECTION
   return {
     userId: "mock-user",
-    email: "demo@boombignose.org",
+    email: "demo@thai-chili-peppers.org",
     orgId: "mock-org",
     orgName: "My Workspace",
     role: "owner" as Role,

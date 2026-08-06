@@ -46,7 +46,7 @@ export default async function NoWorkspacePage() {
         </CardHeader>
         <CardContent className="text-muted-foreground text-sm">
           Just exploring? Sign out and use the demo account{" "}
-          <span className="font-medium">demo@boombignose.org</span>.
+          <span className="font-medium">demo@thai-chili-peppers.org</span>.
         </CardContent>
         <CardFooter>
           <form action="/auth/signout" method="post" className="w-full">

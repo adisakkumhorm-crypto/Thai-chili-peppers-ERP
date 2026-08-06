@@ -1,13 +1,13 @@
 -- ════════════════════════════════════════════════════════════════════════════
--- BoomBigNose Company OS — demo seed (FAKE data only).
+-- Thai Chili Peppers Company OS — demo seed (FAKE data only).
 --
 -- Runs via the service role / superuser (bypasses RLS). Idempotent.
 -- Demo logins (LOCAL ONLY):  password for all = BoomDemo123!
---   demo@boombignose.org       (owner / founder)
---   nattapong@boombignose.org  (member / junior dev)
---   praewa@boombignose.org     (member / junior dev)
+--   demo@thai-chili-peppers.org       (owner / founder)
+--   nattapong@thai-chili-peppers.org  (member / junior dev)
+--   praewa@thai-chili-peppers.org     (member / junior dev)
 --
--- All names, emails (@boombignose.org / example.com), and phone numbers are
+-- All names, emails (@thai-chili-peppers.org / example.com), and phone numbers are
 -- fictional. No real personal data.
 -- ════════════════════════════════════════════════════════════════════════════
 
@@ -21,15 +21,15 @@ insert into auth.users (
   raw_app_meta_data, raw_user_meta_data, created_at, updated_at,
   confirmation_token, recovery_token, email_change_token_new, email_change
 ) values
-  ('00000000-0000-0000-0000-000000000000','b0000000-0000-0000-0000-000000000001','authenticated','authenticated','demo@boombignose.org',      crypt('BoomDemo123!', gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}','{"full_name":"Boom (Founder)"}',          now(), now(), '', '', '', ''),
-  ('00000000-0000-0000-0000-000000000000','b0000000-0000-0000-0000-000000000002','authenticated','authenticated','nattapong@boombignose.org', crypt('BoomDemo123!', gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}','{"full_name":"Nattapong (Junior Dev)"}',  now(), now(), '', '', '', ''),
-  ('00000000-0000-0000-0000-000000000000','b0000000-0000-0000-0000-000000000003','authenticated','authenticated','praewa@boombignose.org',    crypt('BoomDemo123!', gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}','{"full_name":"Praewa (Junior Dev)"}',     now(), now(), '', '', '', '')
+  ('00000000-0000-0000-0000-000000000000','b0000000-0000-0000-0000-000000000001','authenticated','authenticated','demo@thai-chili-peppers.org',      crypt('BoomDemo123!', gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}','{"full_name":"Boom (Founder)"}',          now(), now(), '', '', '', ''),
+  ('00000000-0000-0000-0000-000000000000','b0000000-0000-0000-0000-000000000002','authenticated','authenticated','nattapong@thai-chili-peppers.org', crypt('BoomDemo123!', gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}','{"full_name":"Nattapong (Junior Dev)"}',  now(), now(), '', '', '', ''),
+  ('00000000-0000-0000-0000-000000000000','b0000000-0000-0000-0000-000000000003','authenticated','authenticated','praewa@thai-chili-peppers.org',    crypt('BoomDemo123!', gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}','{"full_name":"Praewa (Junior Dev)"}',     now(), now(), '', '', '', '')
 on conflict (id) do nothing;
 
 insert into auth.identities (id, provider_id, user_id, identity_data, provider, last_sign_in_at, created_at, updated_at) values
-  (gen_random_uuid(), 'b0000000-0000-0000-0000-000000000001','b0000000-0000-0000-0000-000000000001','{"sub":"b0000000-0000-0000-0000-000000000001","email":"demo@boombignose.org","email_verified":true}',     'email', now(), now(), now()),
-  (gen_random_uuid(), 'b0000000-0000-0000-0000-000000000002','b0000000-0000-0000-0000-000000000002','{"sub":"b0000000-0000-0000-0000-000000000002","email":"nattapong@boombignose.org","email_verified":true}','email', now(), now(), now()),
-  (gen_random_uuid(), 'b0000000-0000-0000-0000-000000000003','b0000000-0000-0000-0000-000000000003','{"sub":"b0000000-0000-0000-0000-000000000003","email":"praewa@boombignose.org","email_verified":true}',   'email', now(), now(), now())
+  (gen_random_uuid(), 'b0000000-0000-0000-0000-000000000001','b0000000-0000-0000-0000-000000000001','{"sub":"b0000000-0000-0000-0000-000000000001","email":"demo@thai-chili-peppers.org","email_verified":true}',     'email', now(), now(), now()),
+  (gen_random_uuid(), 'b0000000-0000-0000-0000-000000000002','b0000000-0000-0000-0000-000000000002','{"sub":"b0000000-0000-0000-0000-000000000002","email":"nattapong@thai-chili-peppers.org","email_verified":true}','email', now(), now(), now()),
+  (gen_random_uuid(), 'b0000000-0000-0000-0000-000000000003','b0000000-0000-0000-0000-000000000003','{"sub":"b0000000-0000-0000-0000-000000000003","email":"praewa@thai-chili-peppers.org","email_verified":true}',   'email', now(), now(), now())
 on conflict (provider_id, provider) do nothing;
 
 -- Profiles (belt-and-braces; the on_auth_user_created trigger also creates these)
@@ -41,7 +41,7 @@ on conflict (id) do update set full_name = excluded.full_name;
 
 -- ── Organization + settings + memberships ───────────────────────────────────
 insert into organizations (id, name, slug) values
-  ('a0000000-0000-0000-0000-000000000001','BoomBigNose AI','boombignose')
+  ('a0000000-0000-0000-0000-000000000001','Thai Chili Peppers AI','thai-chili-peppers')
 on conflict (id) do nothing;
 
 insert into org_settings (org_id, cash_balance_satang, monthly_burn_satang) values
