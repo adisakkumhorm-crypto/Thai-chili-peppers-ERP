@@ -4,6 +4,7 @@ import {
   Handshake,
   FolderKanban,
   Receipt,
+  Package,
   Settings,
   type LucideIcon,
 } from "lucide-react"
@@ -25,6 +26,7 @@ export const NAV_ITEMS: NavItem[] = [
   { title: "Clients", href: "/clients", icon: Users },
   { title: "Deals", href: "/deals", icon: Handshake },
   { title: "Projects", href: "/projects", icon: FolderKanban },
+  { title: "Products", href: "/products", icon: Package },
   { title: "Finance", href: "/finance", icon: Receipt },
   { title: "Settings", href: "/settings", icon: Settings },
 ]
