@@ -1063,6 +1063,112 @@ export type Database = {
           },
         ]
       }
+      purchase_order_items: {
+        Row: {
+          created_at: string
+          id: string
+          org_id: string
+          po_id: string
+          product_id: string
+          quantity: number
+          unit_price: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          org_id: string
+          po_id: string
+          product_id: string
+          quantity?: number
+          unit_price?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          org_id?: string
+          po_id?: string
+          product_id?: string
+          quantity?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_order_items_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_order_items_po_id_fkey"
+            columns: ["po_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_order_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      purchase_orders: {
+        Row: {
+          created_at: string
+          expected_date: string | null
+          id: string
+          notes: string | null
+          org_id: string
+          po_number: string
+          status: Database["public"]["Enums"]["po_status"]
+          supplier_id: string
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          expected_date?: string | null
+          id?: string
+          notes?: string | null
+          org_id: string
+          po_number: string
+          status?: Database["public"]["Enums"]["po_status"]
+          supplier_id: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          expected_date?: string | null
+          id?: string
+          notes?: string | null
+          org_id?: string
+          po_number?: string
+          status?: Database["public"]["Enums"]["po_status"]
+          supplier_id?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_orders_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_orders_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       reminders: {
         Row: {
           channel: Database["public"]["Enums"]["reminder_channel"]
@@ -1157,6 +1263,53 @@ export type Database = {
           },
         ]
       }
+      suppliers: {
+        Row: {
+          address: string | null
+          created_at: string
+          email: string | null
+          id: string
+          name: string
+          notes: string | null
+          org_id: string
+          phone: string | null
+          tax_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          org_id: string
+          phone?: string | null
+          tax_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          org_id?: string
+          phone?: string | null
+          tax_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "suppliers_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       template_categories: {
         Row: {
           created_at: string
@@ -1235,6 +1388,7 @@ export type Database = {
         | "promptpay"
         | "cheque"
         | "other"
+      po_status: "draft" | "ordered" | "received" | "cancelled"
       project_status:
         | "not_started"
         | "in_progress"
@@ -1417,6 +1571,7 @@ export const Constants = {
         "cheque",
         "other",
       ],
+      po_status: ["draft", "ordered", "received", "cancelled"],
       project_status: [
         "not_started",
         "in_progress",
