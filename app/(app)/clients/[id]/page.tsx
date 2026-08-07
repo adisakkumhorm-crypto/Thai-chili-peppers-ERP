@@ -37,7 +37,7 @@ export default async function ClientDetailPage({
 
   const { data: client } = await supabase
     .from("clients")
-    .select("id, name, industry, source, notes, created_at")
+    .select("id, name, industry, source, notes, tax_id, address, created_at")
     .eq("id", id)
     .maybeSingle()
 
@@ -87,9 +87,17 @@ export default async function ClientDetailPage({
       {/* Overview */}
       <Card>
         <CardContent className="grid gap-4 sm:grid-cols-3">
+          <Field label="Tax ID" value={client.tax_id} />
           <Field label="Industry" value={client.industry} />
           <Field label="Source" value={client.source} />
-          <Field label="Added" value={formatDate(client.created_at)} />
+          
+          {client.address ? (
+            <div className="space-y-1 sm:col-span-3">
+              <p className="text-muted-foreground text-xs font-medium">Address</p>
+              <p className="text-sm whitespace-pre-wrap">{client.address}</p>
+            </div>
+          ) : null}
+
           {client.notes ? (
             <div className="space-y-1 sm:col-span-3">
               <p className="text-muted-foreground text-xs font-medium">Notes</p>

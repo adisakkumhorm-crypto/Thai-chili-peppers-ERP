@@ -12,6 +12,8 @@ const ClientInput = z.object({
   industry: z.string().optional(),
   source: z.string().optional(),
   notes: z.string().optional(),
+  tax_id: z.string().optional(),
+  address: z.string().optional(),
 })
 
 const ContactInput = z.object({
@@ -45,6 +47,8 @@ export async function createClient(
       industry: nullify(parsed.data.industry),
       source: nullify(parsed.data.source),
       notes: nullify(parsed.data.notes),
+      tax_id: nullify(parsed.data.tax_id),
+      address: nullify(parsed.data.address),
     })
     .select("id")
     .single()
@@ -71,6 +75,8 @@ export async function updateClient(
       industry: nullify(parsed.data.industry),
       source: nullify(parsed.data.source),
       notes: nullify(parsed.data.notes),
+      tax_id: nullify(parsed.data.tax_id),
+      address: nullify(parsed.data.address),
     })
     .eq("id", id)
     .eq("org_id", ctx.orgId)

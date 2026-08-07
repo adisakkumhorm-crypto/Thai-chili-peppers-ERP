@@ -23,6 +23,8 @@ const ClientSchema = z.object({
   industry: z.string().optional(),
   source: z.string().optional(),
   notes: z.string().optional(),
+  tax_id: z.string().optional(),
+  address: z.string().optional(),
 })
 
 type ClientValues = z.infer<typeof ClientSchema>
@@ -31,7 +33,6 @@ export function ClientForm({
   action,
   defaultValues,
   submitLabel = "Save client",
-  /** When true, the action redirects on success, so we don't toast here. */
   redirectsOnSuccess = false,
 }: {
   action: (values: ClientValues) => Promise<{ error?: string }>
@@ -47,6 +48,8 @@ export function ClientForm({
       industry: defaultValues?.industry ?? "",
       source: defaultValues?.source ?? "",
       notes: defaultValues?.notes ?? "",
+      tax_id: defaultValues?.tax_id ?? "",
+      address: defaultValues?.address ?? "",
     },
   })
 
@@ -59,7 +62,6 @@ export function ClientForm({
             toast.error(res.error)
             return
           }
-          // On a redirecting action the navigation already happened.
           if (!redirectsOnSuccess) {
             toast.success("Saved")
             router.refresh()
@@ -72,7 +74,7 @@ export function ClientForm({
           name="name"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Name</FormLabel>
+              <FormLabel>Client Name / Company</FormLabel>
               <FormControl>
                 <Input placeholder="Acme Co." {...field} />
               </FormControl>
@@ -84,12 +86,12 @@ export function ClientForm({
         <div className="grid gap-4 sm:grid-cols-2">
           <FormField
             control={form.control}
-            name="industry"
+            name="tax_id"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Industry</FormLabel>
+                <FormLabel>Tax ID (เลขประจำตัวผู้เสียภาษี)</FormLabel>
                 <FormControl>
-                  <Input placeholder="e.g. E-commerce" {...field} />
+                  <Input placeholder="01055xxxxxxxx" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -97,12 +99,12 @@ export function ClientForm({
           />
           <FormField
             control={form.control}
-            name="source"
+            name="industry"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Source</FormLabel>
+                <FormLabel>Industry</FormLabel>
                 <FormControl>
-                  <Input placeholder="e.g. Referral" {...field} />
+                  <Input placeholder="e.g. Retail, Food" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -112,14 +114,46 @@ export function ClientForm({
 
         <FormField
           control={form.control}
+          name="address"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Address</FormLabel>
+              <FormControl>
+                <Textarea
+                  placeholder="Billing / Shipping Address..."
+                  rows={2}
+                  {...field}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="source"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Source (ช่องทางที่รู้จัก)</FormLabel>
+              <FormControl>
+                <Input placeholder="e.g. Facebook, Line OA, Referral" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
           name="notes"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Notes</FormLabel>
+              <FormLabel>Notes (บันทึกเพิ่มเติม)</FormLabel>
               <FormControl>
                 <Textarea
                   placeholder="Context, how you met, what they need…"
-                  rows={4}
+                  rows={3}
                   {...field}
                 />
               </FormControl>

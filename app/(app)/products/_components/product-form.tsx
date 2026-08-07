@@ -41,8 +41,8 @@ export function ProductForm({
   redirectsOnSuccess?: boolean
 }) {
   const router = useRouter()
-  const form = useForm<ProductValues>({
-    resolver: zodResolver(ProductSchema),
+  const form = useForm<z.infer<typeof ProductSchema>>({
+    resolver: zodResolver(ProductSchema) as any,
     defaultValues: {
       name: defaultValues?.name ?? "",
       sku: defaultValues?.sku ?? "",

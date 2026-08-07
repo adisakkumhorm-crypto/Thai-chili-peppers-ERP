@@ -43,7 +43,11 @@ export default async function EditProductPage({
         <CardContent>
           <ProductForm
             action={updateProduct.bind(null, product.id)}
-            defaultValues={product}
+            defaultValues={{
+              ...product,
+              sku: product.sku ?? undefined,
+              description: product.description ?? undefined,
+            }}
             submitLabel="Save changes"
           />
         </CardContent>
