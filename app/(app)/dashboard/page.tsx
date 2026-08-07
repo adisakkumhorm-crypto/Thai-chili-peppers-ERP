@@ -1,3 +1,4 @@
+import Link from "next/link"
 import {
   Wallet,
   TrendingUp,
@@ -9,6 +10,7 @@ import {
   Briefcase,
   CalendarClock,
   AlertTriangle,
+  Package,
 } from "lucide-react"
 
 import { getDashboardData } from "@/lib/queries/dashboard"
@@ -31,22 +33,15 @@ function runwayLabel(months: number | null): { value: string; hint: string; tone
 
 export default async function DashboardPage() {
   const d = await getDashboardData()
-  const runway = runwayLabel(d.runwayMonths)
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Dashboard"
-        description="Cash, pipeline, delivery, and what needs attention today."
+        description="Overview of your sales, cashflow, and inventory."
       />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard
-          label="Cash on hand"
-          value={formatTHBWhole(d.cashSatang)}
-          icon={Wallet}
-          hint="Manual balance · edit in Settings"
-        />
         <StatCard
           label="Revenue this month"
           value={formatTHB(d.monthlyRevenueSatang)}
@@ -54,30 +49,17 @@ export default async function DashboardPage() {
           tone="positive"
         />
         <StatCard
-          label="Burn this month"
-          value={formatTHB(d.monthlyBurnSatang)}
-          icon={Flame}
-          tone="negative"
-          hint={`Net burn ${formatTHB(d.netBurnSatang)}`}
-        />
-        <StatCard
-          label="Runway"
-          value={runway.value}
-          icon={Hourglass}
-          tone={runway.tone}
-          hint={runway.hint}
-        />
-        <StatCard
-          label="Open pipeline"
+          label="Open pipeline (Deals)"
           value={formatTHBWhole(d.pipelineSatang)}
           icon={Target}
           hint={`Weighted ${formatTHBWhole(d.weightedPipelineSatang)}`}
         />
         <StatCard
-          label="MRR"
-          value={formatTHB(d.mrrSatang)}
-          icon={Repeat}
-          hint="Recurring revenue / month"
+          label="Total Products"
+          value={String(d.totalProductsCount)}
+          icon={Package}
+          hint={`${d.lowStockItems.length} items running low`}
+          tone={d.lowStockItems.length > 0 ? "warning" : "default"}
         />
         <StatCard
           label="Unpaid invoices"
@@ -86,37 +68,33 @@ export default async function DashboardPage() {
           tone={d.overdueInvoiceCount > 0 ? "warning" : "default"}
           hint={`${d.unpaidInvoiceCount} open · ${d.overdueInvoiceCount} overdue`}
         />
-        <StatCard
-          label="Active projects"
-          value={String(d.activeProjectCount)}
-          icon={Briefcase}
-          hint="In delivery or support"
-        />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
-              <CalendarClock className="size-4" /> Follow-ups due today
+              <Package className="size-4" /> Inventory Alerts (Low Stock)
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {d.followUpsDueToday.length === 0 ? (
+            {d.lowStockItems.length === 0 ? (
               <EmptyState
-                icon={CalendarClock}
-                title="Nothing due today"
-                description="You're all caught up on follow-ups."
+                icon={Package}
+                title="Stock is healthy"
+                description="No products are currently running low."
                 className="border-0 p-6"
               />
             ) : (
               <ul className="divide-y">
-                {d.followUpsDueToday.map((f) => (
-                  <li key={f.id} className="flex items-center gap-3 py-2.5 text-sm">
-                    <Badge variant="outline" className="shrink-0 capitalize">
-                      {f.type.replace("_", " ")}
+                {d.lowStockItems.map((item) => (
+                  <li key={item.id} className="flex items-center justify-between gap-3 py-2.5 text-sm">
+                    <Link href={`/products/${item.id}`} className="hover:underline font-medium truncate text-primary">
+                      {item.name}
+                    </Link>
+                    <Badge variant="destructive" className="shrink-0">
+                      {item.stock_quantity} left
                     </Badge>
-                    <span className="truncate">{f.body ?? "Follow up"}</span>
                   </li>
                 ))}
               </ul>
@@ -127,7 +105,7 @@ export default async function DashboardPage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
-              <AlertTriangle className="size-4" /> Needs attention
+              <AlertTriangle className="size-4" /> Action Needed
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -139,21 +117,26 @@ export default async function DashboardPage() {
             </div>
             <div className="rounded-md border">
               <div className="border-b px-3 py-2 text-sm font-medium">
-                Overdue follow-ups ({d.overdueFollowUps.length})
+                Follow-ups due today & overdue
               </div>
-              {d.overdueFollowUps.length === 0 ? (
-                <p className="text-muted-foreground px-3 py-3 text-sm">None — nice work.</p>
+              {d.followUpsDueToday.length === 0 && d.overdueFollowUps.length === 0 ? (
+                <p className="text-muted-foreground px-3 py-3 text-sm">All caught up — nice work.</p>
               ) : (
                 <ul className="divide-y">
-                  {d.overdueFollowUps.slice(0, 5).map((f) => (
-                    <li key={f.id} className="flex items-center gap-3 px-3 py-2.5 text-sm">
-                      <Badge variant="outline" className="shrink-0 capitalize">
-                        {f.type.replace("_", " ")}
+                  {d.overdueFollowUps.slice(0, 3).map((f) => (
+                    <li key={f.id} className="flex items-center gap-3 px-3 py-2.5 text-sm text-red-600 dark:text-red-400">
+                      <Badge variant="destructive" className="shrink-0 capitalize">
+                        Overdue
                       </Badge>
                       <span className="truncate">{f.body ?? "Follow up"}</span>
-                      <span className="text-muted-foreground ml-auto shrink-0 text-xs">
-                        {f.due_date}
-                      </span>
+                    </li>
+                  ))}
+                  {d.followUpsDueToday.slice(0, 3).map((f) => (
+                        <li key={f.id} className="flex items-center gap-3 px-3 py-2.5 text-sm">
+                      <Badge variant="outline" className="shrink-0 capitalize">
+                        Today
+                      </Badge>
+                      <span className="truncate">{f.body ?? "Follow up"}</span>
                     </li>
                   ))}
                 </ul>

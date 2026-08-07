@@ -20,6 +20,12 @@ export type FollowUp = {
   due_date: string | null
 }
 
+export type LowStockItem = {
+  id: string
+  name: string
+  stock_quantity: number
+}
+
 export type DashboardData = {
   cashSatang: number
   monthlyRevenueSatang: number
@@ -35,6 +41,8 @@ export type DashboardData = {
   activeProjectCount: number
   followUpsDueToday: FollowUp[]
   overdueFollowUps: FollowUp[]
+  totalProductsCount: number
+  lowStockItems: LowStockItem[]
 }
 
 const ACTIVE_PROJECT_STATUSES: Enums<"project_status">[] = [
@@ -58,6 +66,7 @@ export async function getDashboardData(): Promise<DashboardData> {
     projectsRes,
     activitiesRes,
     settingsRes,
+    productsRes,
   ] = await Promise.all([
     supabase.from("deals").select("stage,value_satang"),
     supabase
@@ -71,6 +80,7 @@ export async function getDashboardData(): Promise<DashboardData> {
       .from("org_settings")
       .select("cash_balance_satang,monthly_burn_satang")
       .maybeSingle(),
+    supabase.from("products").select("id,name,stock_quantity"),
   ])
 
   const deals = dealsRes.data ?? []
@@ -80,6 +90,7 @@ export async function getDashboardData(): Promise<DashboardData> {
   const projects = projectsRes.data ?? []
   const activities = activitiesRes.data ?? []
   const settings = settingsRes.data
+  const products = productsRes.data ?? []
 
   const paidByInvoice = new Map<string, number>()
   for (const p of payments) {
@@ -113,6 +124,11 @@ export async function getDashboardData(): Promise<DashboardData> {
   const overdueFollowUps = activities
     .filter((a) => !a.done && isPastDue(a.due_date, today))
     .map(toFollowUp)
+    
+  const lowStockItems = products
+    .filter((p) => p.stock_quantity <= 10) // Define low stock threshold as <= 10
+    .sort((a, b) => a.stock_quantity - b.stock_quantity)
+    .map((p) => ({ id: p.id, name: p.name, stock_quantity: p.stock_quantity }))
 
   return {
     cashSatang,
@@ -131,6 +147,8 @@ export async function getDashboardData(): Promise<DashboardData> {
     ).length,
     followUpsDueToday,
     overdueFollowUps,
+    totalProductsCount: products.length,
+    lowStockItems,
   }
 }
 
