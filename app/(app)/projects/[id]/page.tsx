@@ -6,6 +6,10 @@ import {
   ListChecks,
   Flag,
   Wallet,
+  Package,
+  Banknote,
+  TrendingUp,
+  ShoppingCart,
   CalendarClock,
   User,
   Building2,
@@ -78,7 +82,7 @@ export default async function ProjectDetailPage({
     client: { name: string } | null
   }
 
-  const [{ data: tasksData }, { data: milestonesData }, { data: invoicesData }, { data: costsData }] =
+  const [{ data: tasksData }, { data: milestonesData }, { data: invoicesData }, { data: costsData }, { data: invTxData }, { data: timesheetsData }, { data: poItemsData }] =
     await Promise.all([
       supabase
         .from("project_tasks")
@@ -100,6 +104,20 @@ export default async function ProjectDetailPage({
         .eq("project_id", id)
         .in("status", ["sent", "partially_paid", "paid", "overdue"]),
       supabase.from("costs").select("amount_satang").eq("project_id", id),
+      supabase
+        .from("inventory_transactions")
+        .select("quantity, created_at, products(name, cost)")
+        .eq("reference_no", p.name)
+        .eq("transaction_type", "issue"),
+      supabase
+        .from("timesheets")
+        .select("wage_amount")
+        .eq("project_id", id)
+        .eq("status", "completed"),
+      supabase
+        .from("purchase_order_items")
+        .select("id, quantity, unit_price, purchase_orders!inner(id, po_number, expected_date, status), products(name)")
+        .eq("project_id", id),
     ])
 
   const tasks = (tasksData ?? []) as Array<{
@@ -126,8 +144,27 @@ export default async function ProjectDetailPage({
   const doneTasks = tasks.filter((t) => t.done).length
   const doneMilestones = milestones.filter((m) => m.done).length
 
-  const hasFinancials = invoices.length > 0 || costs.length > 0
-  const profit = hasFinancials ? projectProfit(invoices, costs) : null
+  
+  const poItems = (poItemsData ?? []) as any[]
+  
+  const invTxs = (invTxData ?? []) as any[]
+  
+  const poMaterialCost = poItems.reduce((acc, item) => acc + (item.quantity * item.unit_price * 100), 0)
+  // inventory issues have negative quantity, so we multiply by -1
+  const invMaterialCost = invTxs.reduce((acc, tx) => acc + (Math.abs(tx.quantity) * (tx.products?.cost || 0) * 100), 0)
+  const materialCostSatang = poMaterialCost + invMaterialCost
+  const timesheets = (timesheetsData ?? []) as any[]
+  
+  // timesheets store wage in Baht, convert to satang
+  const laborCostSatang = timesheets.reduce((acc, t) => acc + ((t.wage_amount || 0) * 100), 0)
+  const totalCostSatang = materialCostSatang + laborCostSatang
+  const budgetSatang = p.budget_satang ?? 0
+  const collectedSatang = invoices.filter(i => i.status === "paid" || i.status === "partially_paid").reduce((acc, i) => acc + i.amount_satang, 0)
+  
+  // Use collected if available, else budget for P/L projection
+  const revenueBase = collectedSatang > 0 ? collectedSatang : budgetSatang
+  const currentProfitSatang = revenueBase - totalCostSatang
+
 
   return (
     <div className="space-y-6">
@@ -185,23 +222,103 @@ export default async function ProjectDetailPage({
       </Card>
 
       {/* Profit (only when there are invoices or costs) */}
-      {profit ? (
-        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-          <StatCard label="Revenue" value={formatTHB(profit.revenueSatang)} tone="positive" />
-          <StatCard label="Cost" value={formatTHB(profit.costSatang)} tone="negative" />
-          <StatCard
-            label="Profit"
-            value={formatTHB(profit.profitSatang)}
-            tone={profit.profitSatang >= 0 ? "positive" : "negative"}
-          />
-          <StatCard
-            label="Margin"
-            value={`${profit.marginPct.toFixed(0)}%`}
-            tone={profit.marginPct >= 0 ? "default" : "negative"}
-            hint="Billed revenue vs. recorded cost"
-          />
-        </div>
-      ) : null}
+      
+      {/* Fabrication Financial Dashboard */}
+      <Card className="border-primary/20 shadow-sm">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base flex items-center gap-2">
+            <TrendingUp className="size-4 text-primary" /> Project Financials (กำไรขาดทุนปัจจุบัน)
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 gap-4 lg:grid-cols-6 mb-4">
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground">มูลค่างาน (Budget)</p>
+              <p className="text-lg font-semibold">{formatTHB(budgetSatang)}</p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground text-blue-600">ค่าวัสดุ (Material)</p>
+              <p className="text-lg font-semibold text-blue-600">{formatTHB(materialCostSatang)}</p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground text-purple-600">ค่าแรง (Labor)</p>
+              <p className="text-lg font-semibold text-purple-600">{formatTHB(laborCostSatang)}</p>
+              <p className="text-[10px] text-muted-foreground">ดึงจากเวลาเข้างาน (Timesheet)</p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground text-red-600">รวมต้นทุน (Total Cost)</p>
+              <p className="text-lg font-semibold text-red-600">{formatTHB(totalCostSatang)}</p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground text-emerald-600">รับเงินแล้ว (Collected)</p>
+              <p className="text-lg font-semibold text-emerald-600">{formatTHB(collectedSatang)}</p>
+            </div>
+            <div className="space-y-1 rounded-md bg-muted/50 p-2 border">
+              <p className="text-xs font-medium">กำไรปัจจุบัน (P/L)</p>
+              <p className={cn("text-xl font-bold", currentProfitSatang >= 0 ? "text-emerald-600" : "text-red-600")}>
+                {formatTHB(currentProfitSatang)}
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+      
+      {/* Material Orders (POs) */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <ShoppingCart className="size-4" /> รายการสั่งซื้อวัสดุ (Material Orders)
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {poItems.length === 0 ? (
+            <EmptyState
+              icon={Package}
+              title="No materials ordered yet"
+              description="Purchase orders linked to this project will appear here."
+              className="border-0 p-6"
+            />
+          ) : (
+            <div className="rounded-md border overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b bg-muted/50 text-left">
+                    <th className="p-3 font-medium">PO Number</th>
+                    <th className="p-3 font-medium">Product</th>
+                    <th className="p-3 font-medium text-right">Qty</th>
+                    <th className="p-3 font-medium text-right">Total (฿)</th>
+                    <th className="p-3 font-medium text-center">Status</th>
+                    <th className="p-3 font-medium">Expected Delivery</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {poItems.map(item => (
+                    <tr key={item.id} className="hover:bg-muted/30">
+                      <td className="p-3">
+                        <Link href={`/purchases/${item.purchase_orders.id}`} className="text-primary hover:underline font-medium">
+                          {item.purchase_orders.po_number}
+                        </Link>
+                      </td>
+                      <td className="p-3">{item.products?.name}</td>
+                      <td className="p-3 text-right">{item.quantity}</td>
+                      <td className="p-3 text-right font-medium">{(item.quantity * item.unit_price).toFixed(2)}</td>
+                      <td className="p-3 text-center">
+                        <span className="capitalize text-xs bg-muted px-2 py-1 rounded-full border">
+                          {item.purchase_orders.status.replace("_", " ")}
+                        </span>
+                      </td>
+                      <td className="p-3 text-muted-foreground">
+                        {item.purchase_orders.expected_date ? formatDate(item.purchase_orders.expected_date) : "TBD"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
 
       {/* Tasks */}
       <Card>
@@ -306,6 +423,49 @@ export default async function ProjectDetailPage({
           )}
         </CardContent>
       </Card>
+    
+      {/* Issued Materials */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Package className="size-4" /> ประวัติการเบิกของหน้างาน (Issued Materials)
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {invTxs.length === 0 ? (
+            <EmptyState
+              icon={Package}
+              title="ยังไม่มีการเบิกของ"
+              description="เมื่อโฟร์แมนสแกน QR Code เบิกของจากคลัง ข้อมูลจะมาขึ้นที่นี่"
+              className="border-0 p-6"
+            />
+          ) : (
+            <div className="rounded-md border overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b bg-muted/50 text-left">
+                    <th className="p-3 font-medium">วันที่เบิก (Date)</th>
+                    <th className="p-3 font-medium">Product</th>
+                    <th className="p-3 font-medium text-right">Qty</th>
+                    <th className="p-3 font-medium text-right">Cost (฿)</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {invTxs.map(tx => (
+                    <tr key={tx.created_at} className="hover:bg-muted/30">
+                      <td className="p-3 text-muted-foreground">{new Date(tx.created_at).toLocaleDateString('th-TH', { timeZone: "Asia/Bangkok" })}</td>
+                      <td className="p-3 font-medium">{tx.products?.name}</td>
+                      <td className="p-3 text-right">{Math.abs(tx.quantity)}</td>
+                      <td className="p-3 text-right text-red-600 font-medium">{(Math.abs(tx.quantity) * (tx.products?.cost || 0)).toFixed(2)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
     </div>
   )
 }

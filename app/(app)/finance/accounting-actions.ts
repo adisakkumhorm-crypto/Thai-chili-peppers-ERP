@@ -87,3 +87,7 @@ export async function syncInvoiceToAccounting(
   revalidatePath(`/finance/invoices/${invoice.id}`)
   return { externalId }
 }
+
+/**
+ * 4. Sync Invoice to TRCLOUD API (Stub/Template)
+ */

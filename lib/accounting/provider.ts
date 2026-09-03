@@ -28,7 +28,7 @@ export type ExternalInvoicePayload = {
 }
 
 /** The three providers we scaffold against. Matches the `accounting_provider` enum. */
-export type ProviderKey = "flowaccount" | "peak" | "xero"
+export type ProviderKey = "flowaccount" | "peak" | "trcloud" | "xero"
 
 export interface AccountingProvider {
   key: ProviderKey
@@ -68,6 +68,7 @@ function stubProvider(key: ProviderKey, label: string): AccountingProvider {
 export const PROVIDERS: Record<ProviderKey, AccountingProvider> = {
   flowaccount: stubProvider("flowaccount", "FlowAccount"),
   peak: stubProvider("peak", "PEAK"),
+  trcloud: stubProvider("trcloud", "TRCLOUD"),
   xero: stubProvider("xero", "Xero"),
 }
 

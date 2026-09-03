@@ -1,0 +1,2 @@
+authtoken: "" # Add if needed, but sometimes ngrok works without it
+version: "2"

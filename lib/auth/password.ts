@@ -14,7 +14,7 @@
  * failing rule at once. DB-independent and safe to unit test in isolation.
  */
 
-export const PASSWORD_MIN_LENGTH = 10
+export const PASSWORD_MIN_LENGTH = 6
 
 export type PasswordCheck = {
   /** True only when every policy rule is satisfied. */
@@ -33,20 +33,11 @@ export function validatePassword(pw: string): PasswordCheck {
   const issues: string[] = []
 
   if (typeof pw !== "string") {
-    return { ok: false, issues: ["Password is required."] }
+    return { ok: false, issues: ["จำเป็นต้องระบุรหัสผ่าน"] }
   }
 
   if (pw.length < PASSWORD_MIN_LENGTH) {
-    issues.push(`Use at least ${PASSWORD_MIN_LENGTH} characters.`)
-  }
-  if (!/[a-z]/.test(pw)) {
-    issues.push("Add at least one lowercase letter (a–z).")
-  }
-  if (!/[A-Z]/.test(pw)) {
-    issues.push("Add at least one uppercase letter (A–Z).")
-  }
-  if (!/[0-9]/.test(pw)) {
-    issues.push("Add at least one number (0–9).")
+    issues.push(`รหัสผ่านต้องมีความยาวอย่างน้อย ${PASSWORD_MIN_LENGTH} ตัวอักษร`)
   }
 
   return { ok: issues.length === 0, issues }

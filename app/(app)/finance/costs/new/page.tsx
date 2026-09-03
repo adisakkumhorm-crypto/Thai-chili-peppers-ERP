@@ -4,6 +4,7 @@ import { ArrowLeft } from "lucide-react"
 import { createClient } from "@/lib/supabase/server"
 import { requireOrgContext } from "@/lib/auth"
 import { todayISO } from "@/lib/dates"
+import { getTaxRates } from "@/lib/accounting/tax-actions"
 
 import { PageHeader } from "@/components/page-header"
 import { Button } from "@/components/ui/button"
@@ -16,9 +17,10 @@ import type { Option } from "../../_components/form-fields"
 export const dynamic = "force-dynamic"
 
 export default async function NewCostPage() {
-  await requireOrgContext()
+  const ctx = await requireOrgContext()
   const supabase = await createClient()
 
+  const taxes = await getTaxRates(ctx.orgId)
   const projectsRes = await supabase
     .from("projects")
     .select("id, name")
@@ -44,6 +46,7 @@ export default async function NewCostPage() {
         <CardContent>
           <CostForm
             projects={projects}
+            taxes={taxes}
             today={todayISO()}
             action={createCost}
           />

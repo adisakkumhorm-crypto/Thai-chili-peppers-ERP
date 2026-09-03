@@ -35,3 +35,15 @@ yarn-debug.log*
 yarn-error.log*
 .vercel
 *.tsbuildinfo
+seed-*.js
+get*.js
+link*.js
+patch*.js
+add*.js
+check*.js
+seed*.js
+*.js
+*.log
+*.patch
+*.diff
+.env*

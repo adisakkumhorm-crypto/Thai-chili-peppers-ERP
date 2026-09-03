@@ -8,6 +8,8 @@ import { formatTHB, formatTHBWhole } from "@/lib/money"
 import {
   pipelineValue,
   weightedPipelineValue,
+  wonValue,
+  pipelineByStage,
   type DealStage,
 } from "@/lib/metrics/pipeline"
 import { Constants } from "@/lib/types/database"
@@ -18,22 +20,23 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
 
+import { DealQuickMove } from "./_components/deal-quick-move"
 import { DealsToolbar } from "./_components/deals-toolbar"
 import type { SavedView } from "@/app/(app)/views/saved-views-menu"
 import type { ViewConfig } from "@/app/(app)/views/view-config"
 
 export const dynamic = "force-dynamic"
 
-type BoardColumn = { stage: DealStage; label: string }
+type BoardColumn = { stage: DealStage; label: string; color: string }
 
 const COLUMNS: BoardColumn[] = [
-  { stage: "lead", label: "Lead" },
-  { stage: "contacted", label: "Contacted" },
-  { stage: "discovery", label: "Discovery" },
-  { stage: "proposal", label: "Proposal" },
-  { stage: "negotiation", label: "Negotiation" },
-  { stage: "won", label: "Won" },
-  { stage: "lost", label: "Lost" },
+  { stage: "lead", label: "ทักแชท (Lead)", color: "border-blue-500/30 bg-blue-500/10 text-blue-400" },
+  { stage: "contacted", label: "คุยแล้ว (Contacted)", color: "border-cyan-500/30 bg-cyan-500/10 text-cyan-400" },
+  { stage: "discovery", label: "ประเมินงาน (Discovery)", color: "border-purple-500/30 bg-purple-500/10 text-purple-400" },
+  { stage: "proposal", label: "เสนอราคา (Proposal)", color: "border-orange-500/30 bg-orange-500/10 text-orange-400" },
+  { stage: "negotiation", label: "รอโอน/ต่อรอง (Negotiation)", color: "border-pink-500/30 bg-pink-500/10 text-pink-400" },
+  { stage: "won", label: "ปิดการขาย 🎉 (Won)", color: "border-emerald-500/30 bg-emerald-500/10 text-emerald-400" },
+  { stage: "lost", label: "พลาดโอกาส 😢 (Lost)", color: "border-rose-500/30 bg-rose-500/10 text-rose-400" },
 ]
 
 const DEAL_STAGES = Constants.public.Enums.deal_stage
@@ -104,6 +107,9 @@ export default async function DealsPage({
   // Headline KPIs summarize the whole pipeline, independent of the active filter.
   const openValue = pipelineValue(allDeals)
   const weighted = weightedPipelineValue(allDeals)
+  const won = wonValue(allDeals)
+  const stageTotals = pipelineByStage(allDeals)
+  const waitingTransfer = stageTotals['negotiation'] || 0
 
   const byStage = new Map<DealStage, typeof deals>()
   for (const col of COLUMNS) byStage.set(col.stage, [])
@@ -114,23 +120,47 @@ export default async function DealsPage({
       <PageHeader title="Deals" description="Your sales pipeline and follow-ups.">
         <Button render={<Link href="/deals/new" />}>
           <Plus className="size-4" />
-          New deal
+          เพิ่มลูกค้าใหม่
         </Button>
       </PageHeader>
 
-      <div className="grid grid-cols-2 gap-4 sm:max-w-lg">
-        <StatCard
-          label="Open pipeline"
-          value={formatTHBWhole(openValue)}
-          icon={Target}
-          hint="Value of deals still in play"
-        />
-        <StatCard
-          label="Weighted pipeline"
-          value={formatTHBWhole(weighted)}
-          icon={Target}
-          hint="By stage win-probability"
-        />
+      {/* 📊 Sales Summary Dashboard Cards (Liquid Glass UI) */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:max-w-4xl">
+        <div className="relative p-6 rounded-2xl bg-gradient-to-br from-blue-500/20 to-blue-500/5 border border-blue-500/30 backdrop-blur-md shadow-[inset_0_2px_15px_rgba(255,255,255,0.1),0_10px_20px_-5px_rgba(0,0,0,0.3)] flex flex-col group overflow-hidden">
+           <div className="absolute inset-0 bg-blue-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+           <div className="flex items-center gap-3 mb-3">
+             <div className="p-2.5 rounded-xl bg-blue-500/20 border border-blue-500/30 text-blue-400 shadow-inner">
+               <Target className="size-5 drop-shadow-[0_0_8px_rgba(59,130,246,0.6)]" />
+             </div>
+             <span className="text-sm font-bold text-white/90 tracking-wide">โอกาสการขาย (Open Pipeline)</span>
+           </div>
+           <div className="text-3xl font-black text-white drop-shadow-[0_0_15px_rgba(59,130,246,0.5)]">{formatTHBWhole(openValue)}</div>
+           <div className="text-xs text-blue-200/60 mt-2 font-medium">มูลค่างานที่กำลังเจรจาทั้งหมด</div>
+        </div>
+
+        <div className="relative p-6 rounded-2xl bg-gradient-to-br from-pink-500/20 to-pink-500/5 border border-pink-500/30 backdrop-blur-md shadow-[inset_0_2px_15px_rgba(255,255,255,0.1),0_10px_20px_-5px_rgba(0,0,0,0.3)] flex flex-col group overflow-hidden">
+           <div className="absolute inset-0 bg-pink-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+           <div className="flex items-center gap-3 mb-3">
+             <div className="p-2.5 rounded-xl bg-pink-500/20 border border-pink-500/30 text-pink-400 shadow-inner">
+               <CalendarClock className="size-5 drop-shadow-[0_0_8px_rgba(236,72,153,0.6)]" />
+             </div>
+             <span className="text-sm font-bold text-white/90 tracking-wide">รอโอนเงิน (Negotiation)</span>
+           </div>
+           <div className="text-3xl font-black text-white drop-shadow-[0_0_15px_rgba(236,72,153,0.5)]">{formatTHBWhole(waitingTransfer)}</div>
+           <div className="text-xs text-pink-200/60 mt-2 font-medium">ลูกค้าที่รอตัดสินใจหรือรอโอนเงิน</div>
+        </div>
+
+        <div className="relative p-6 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-emerald-500/5 border border-emerald-500/30 backdrop-blur-md shadow-[inset_0_2px_15px_rgba(255,255,255,0.1),0_10px_20px_-5px_rgba(0,0,0,0.3)] flex flex-col group overflow-hidden">
+           <div className="absolute inset-0 bg-emerald-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+           <div className="flex items-center gap-3 mb-3">
+             <div className="p-2.5 rounded-xl bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 shadow-inner">
+               <span className="text-xl drop-shadow-[0_0_8px_rgba(52,211,153,0.6)]">🎉</span>
+             </div>
+             <span className="text-sm font-bold text-white/90 tracking-wide">ปิดยอดขายแล้ว (Won)</span>
+           </div>
+           <div className="text-3xl font-black text-emerald-400 drop-shadow-[0_0_20px_rgba(52,211,153,0.7)]">{formatTHBWhole(won)}</div>
+           <div className="text-xs text-emerald-200/60 mt-2 font-medium">ยอดเงินที่ได้รับเรียบร้อยแล้ว</div>
+        </div>
       </div>
 
       {allDeals.length === 0 ? null : (
@@ -145,7 +175,7 @@ export default async function DealsPage({
           action={
             <Button render={<Link href="/deals/new" />}>
               <Plus className="size-4" />
-              New deal
+              เพิ่มลูกค้าใหม่
             </Button>
           }
         />
@@ -168,7 +198,7 @@ export default async function DealsPage({
                 <div key={col.stage} className="w-72 shrink-0">
                   <div className="mb-2 flex items-center justify-between px-1">
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-semibold">{col.label}</span>
+                      <span className={cn("text-sm font-bold px-2 py-1 rounded-md text-white shadow-sm", col.color.replace('text-', 'bg-').replace('/10', '/80').replace('/400', '/500'))}>{col.label.split(' ')[0]}</span>
                       <span className="text-muted-foreground text-xs">
                         {colDeals.length}
                       </span>
@@ -192,6 +222,7 @@ export default async function DealsPage({
                           valueSatang={d.value_satang}
                           followUp={d.next_follow_up_date}
                           today={today}
+                          stage={d.stage}
                         />
                       ))
                     )}
@@ -213,6 +244,7 @@ function DealCard({
   valueSatang,
   followUp,
   today,
+  stage,
 }: {
   id: string
   title: string
@@ -220,18 +252,28 @@ function DealCard({
   valueSatang: number
   followUp: string | null
   today: string
+  stage: DealStage
 }) {
   const overdue = followUp != null && followUp < today
   const dueToday = followUp === today
 
+  let nextStage: DealStage | null = null
+  if (stage === "lead") nextStage = "contacted"
+  else if (stage === "contacted") nextStage = "discovery"
+  else if (stage === "discovery") nextStage = "proposal"
+  else if (stage === "proposal") nextStage = "negotiation"
+  else if (stage === "negotiation") nextStage = "won"
+
   return (
-    <Card className="gap-0 py-0 transition-colors hover:border-ring">
-      <CardContent className="p-3">
+    <Card className="gap-0 py-0 transition-all hover:border-ring hover:shadow-md group/dealcard relative overflow-hidden bg-white/[0.02] border-white/10 backdrop-blur-sm">
+      <div className={cn("absolute top-0 inset-x-0 h-1", overdue ? "bg-red-500" : dueToday ? "bg-amber-500" : "bg-transparent")} />
+      
+      <CardContent className="p-3 pt-4">
         <Link href={`/deals/${id}`} className="block space-y-1.5">
           <div className="text-sm font-medium leading-snug">{title}</div>
           <div className="text-muted-foreground text-xs">{client}</div>
           <div className="flex items-center justify-between gap-2 pt-0.5">
-            <span className="text-sm font-semibold">{formatTHB(valueSatang)}</span>
+            <span className="text-sm font-bold text-emerald-400">{formatTHB(valueSatang)}</span>
             {followUp ? (
               <span
                 className={cn(
@@ -249,6 +291,12 @@ function DealCard({
             ) : null}
           </div>
         </Link>
+
+        {nextStage && (
+          <div className="absolute right-2 bottom-2 opacity-0 group-hover/dealcard:opacity-100 transition-opacity duration-300">
+             <DealQuickMove id={id} nextStage={nextStage} />
+          </div>
+        )}
       </CardContent>
     </Card>
   )

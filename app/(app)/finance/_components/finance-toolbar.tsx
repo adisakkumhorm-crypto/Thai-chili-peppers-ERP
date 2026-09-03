@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { useRouter, usePathname } from "next/navigation"
-import { Download, X } from "lucide-react"
+import { Download, X, FileText, BarChart3, Scale } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -33,11 +33,6 @@ const STATUS_OPTIONS: { value: string; label: string }[] = [
   { value: "cancelled", label: "Cancelled" },
 ]
 
-/**
- * Finance filter + export bar. Status filters the invoices table via the URL;
- * the two export buttons download invoices (carrying the status filter) and
- * costs as CSV.
- */
 export function FinanceToolbar({
   status,
   savedViews,
@@ -63,12 +58,11 @@ export function FinanceToolbar({
   return (
     <div className="flex flex-wrap items-center gap-2">
       <Select
-        items={STATUS_OPTIONS}
         value={status || "all"}
         onValueChange={(v) => onStatusChange(String(v))}
       >
-        <SelectTrigger size="sm" className="w-40">
-          <SelectValue />
+        <SelectTrigger className="w-40 h-9">
+          <SelectValue placeholder="All statuses" />
         </SelectTrigger>
         <SelectContent>
           {STATUS_OPTIONS.map((opt) => (
@@ -81,7 +75,7 @@ export function FinanceToolbar({
 
       {status ? (
         <Button variant="ghost" size="sm" render={<Link href={pathname} />}>
-          <X />
+          <X className="w-4 h-4 mr-1" />
           Clear
         </Button>
       ) : null}
@@ -93,21 +87,56 @@ export function FinanceToolbar({
           activeConfig={config}
         />
         <SaveViewButton module="finance" config={config} />
+        
         <Button
           variant="outline"
           size="sm"
           render={<Link href={invoicesExportHref} />}
         >
-          <Download />
+          <Download className="w-4 h-4 mr-1" />
           Export invoices CSV
         </Button>
+        
         <Button
           variant="outline"
           size="sm"
           render={<Link href="/finance/costs/export" />}
         >
-          <Download />
+          <Download className="w-4 h-4 mr-1" />
           Export costs CSV
+        </Button>
+
+        <Button
+          size="sm"
+          className="bg-indigo-600 hover:bg-indigo-700 text-white"
+          render={<Link href="/finance/reports/income-statement" />}
+        >
+          <BarChart3 className="w-4 h-4 mr-1" />
+          งบกำไรขาดทุน
+        </Button>
+        <Button
+          size="sm"
+          className="bg-blue-600 hover:bg-blue-700 text-white"
+          render={<Link href="/finance/reports/vat" />}
+        >
+          <FileText className="w-4 h-4 mr-1" />
+          รายงานภาษี (ภ.พ.30)
+        </Button>
+        <Button
+          size="sm"
+          className="bg-rose-600 hover:bg-rose-700 text-white"
+          render={<Link href="/finance/reports/wht" />}
+        >
+          <FileText className="w-4 h-4 mr-1" />
+          รายงานหัก ณ ที่จ่าย
+        </Button>
+        <Button
+          size="sm"
+          className="bg-emerald-600 hover:bg-emerald-700 text-white"
+          render={<Link href="/finance/reports/trial-balance" />}
+        >
+          <Scale className="w-4 h-4 mr-1" />
+          งบทดลอง
         </Button>
       </div>
     </div>

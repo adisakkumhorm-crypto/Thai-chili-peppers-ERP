@@ -1,5 +1,6 @@
 "use client"
 
+import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -40,11 +41,16 @@ export function POForm({
   defaultValues?: Partial<POValues>
 }) {
   const router = useRouter()
+  
+  const [initialPoNumber] = useState(() => 
+    defaultValues?.po_number ?? `PO-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, "0")}-${Math.floor(Math.random() * 1000).toString().padStart(3, "0")}`
+  )
+
   const form = useForm<POValues>({
     resolver: zodResolver(POSchema),
     defaultValues: {
       supplier_id: defaultValues?.supplier_id ?? "",
-      po_number: defaultValues?.po_number ?? `PO-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, "0")}-${Math.floor(Math.random() * 1000).toString().padStart(3, "0")}`,
+      po_number: initialPoNumber,
       expected_date: defaultValues?.expected_date ?? "",
       notes: defaultValues?.notes ?? "",
     },
@@ -70,7 +76,7 @@ export function POForm({
           render={({ field }) => (
             <FormItem>
               <FormLabel>Supplier</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
+              <Select onValueChange={field.onChange} value={field.value}>
                 <FormControl>
                   <SelectTrigger>
                     <SelectValue placeholder="Select a supplier" />

@@ -1,0 +1,16 @@
+--- skool-erp/app/(app)/deals/new/page.tsx
++++ skool-erp/app/(app)/deals/new/page.tsx
+@@ -1,13 +1,10 @@
+-import { createClient } from "@/lib/supabase/server"
+ import { PageHeader } from "@/components/page-header"
+ import { Card, CardContent } from "@/components/ui/card"
+-import { DealForm } from "../_components/deal-form"
+ import { createQuickLead } from "../actions"
+ import { QuickLeadForm } from "../_components/quick-lead-form"
+ 
+ export const dynamic = "force-dynamic"
+ 
+ export default async function NewDealPage() {
+-  const supabase = await createClient()
+ 
+   return (

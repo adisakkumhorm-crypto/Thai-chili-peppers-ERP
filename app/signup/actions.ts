@@ -3,6 +3,7 @@
 import { z } from "zod"
 
 import { createClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/admin"
 import { validatePassword } from "@/lib/auth/password"
 
 const SignupSchema = z.object({
@@ -36,19 +37,30 @@ export async function signUp(input: {
     return { ok: false, error: policy.issues.join(" ") }
   }
 
-  const supabase = await createClient()
+  const adminClient = createAdminClient()
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL
-  const { error } = await supabase.auth.signUp({
+  // 1. Create user and Auto-confirm email (Bypass Email)
+  const { data: authData, error } = await adminClient.auth.admin.createUser({
     email,
     password,
-    options: {
-      emailRedirectTo: `${appUrl}/auth/confirm`,
-    },
+    email_confirm: true,
   })
 
   if (error) {
     return { ok: false, error: error.message }
+  }
+
+  const user = authData.user
+  if (user) {
+    // 2. Auto-create join request to bypass the 'request access' manual step
+    const { data: org } = await adminClient.from("organizations").select("id").limit(1).single()
+    if (org) {
+      await adminClient.from("join_requests" as any).insert({
+        user_id: user.id,
+        org_id: org.id,
+        status: "pending"
+      })
+    }
   }
 
   return { ok: true }

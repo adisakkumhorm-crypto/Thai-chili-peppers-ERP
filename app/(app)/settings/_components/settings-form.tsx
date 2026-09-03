@@ -15,6 +15,7 @@ import {
   FormMessage,
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
 import type { UpdateOrgSettingsInput } from "../actions"
 
@@ -29,6 +30,7 @@ const isMoney = (v: string) => {
 
 const FormSchema = z.object({
   orgName: z.string().min(1, "Workspace name is required"),
+  timezone: z.string(),
   cashBalanceBaht: z
     .string()
     .refine(isMoney, "Enter a valid amount (0 or more)"),
@@ -46,17 +48,20 @@ export function SettingsForm({
   defaultOrgName,
   defaultCashBaht,
   defaultBurnBaht,
+  defaultTimezone,
   action,
 }: {
   defaultOrgName: string
   defaultCashBaht: number
   defaultBurnBaht: number | null
+  defaultTimezone?: string
   action: (input: UpdateOrgSettingsInput) => Promise<{ error?: string }>
 }) {
   const form = useForm<FormValues>({
     resolver: zodResolver(FormSchema),
     defaultValues: {
       orgName: defaultOrgName,
+      timezone: defaultTimezone || "Asia/Bangkok",
       cashBalanceBaht: String(defaultCashBaht),
       monthlyBurnBaht: defaultBurnBaht === null ? "" : String(defaultBurnBaht),
     },
@@ -71,12 +76,42 @@ export function SettingsForm({
             orgName: values.orgName,
             cashBalanceBaht: Number(values.cashBalanceBaht),
             monthlyBurnBaht: burn === "" ? undefined : Number(burn),
+            timezone: values.timezone,
           })
           if (res?.error) return toast.error(res.error)
           toast.success("Settings saved")
         })}
         className="space-y-5"
       >
+        <FormField
+          control={form.control}
+          name="timezone"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Timezone (โซนเวลา)</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a timezone" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="Asia/Bangkok">Asia/Bangkok (UTC+7)</SelectItem>
+                  <SelectItem value="Asia/Singapore">Asia/Singapore (UTC+8)</SelectItem>
+                  <SelectItem value="Asia/Tokyo">Asia/Tokyo (UTC+9)</SelectItem>
+                  <SelectItem value="Europe/London">Europe/London (UTC+0)</SelectItem>
+                  <SelectItem value="America/New_York">America/New_York (UTC-5)</SelectItem>
+                  <SelectItem value="UTC">UTC (สากล)</SelectItem>
+                </SelectContent>
+              </Select>
+              <FormDescription>
+                โซนเวลาที่ใช้แสดงผลวันที่และเวลาในระบบ
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
         <FormField
           control={form.control}
           name="orgName"

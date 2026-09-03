@@ -25,6 +25,7 @@ type ProviderKey = ConnectAccountingInput["provider"]
 const PROVIDER_OPTIONS: { value: ProviderKey; label: string }[] = [
   { value: "flowaccount", label: "FlowAccount" },
   { value: "peak", label: "PEAK" },
+  { value: "trcloud", label: "TRCLOUD" },
   { value: "xero", label: "Xero" },
 ]
 

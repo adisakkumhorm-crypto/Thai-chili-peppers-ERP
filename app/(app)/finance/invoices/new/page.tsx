@@ -4,6 +4,7 @@ import { ArrowLeft } from "lucide-react"
 import { createClient } from "@/lib/supabase/server"
 import { requireOrgContext } from "@/lib/auth"
 import { todayISO } from "@/lib/dates"
+import { getTaxRates } from "@/lib/accounting/tax-actions"
 
 import { PageHeader } from "@/components/page-header"
 import { Button } from "@/components/ui/button"
@@ -19,9 +20,10 @@ import type { Option } from "../../_components/form-fields"
 export const dynamic = "force-dynamic"
 
 export default async function NewInvoicePage() {
-  await requireOrgContext()
+  const ctx = await requireOrgContext()
   const supabase = await createClient()
 
+  const taxes = await getTaxRates(ctx.orgId)
   const [clientsRes, projectsRes] = await Promise.all([
     supabase.from("clients").select("id, name").order("name"),
     supabase.from("projects").select("id, name").order("name"),
@@ -43,7 +45,11 @@ export default async function NewInvoicePage() {
     status: "draft",
     issue_date: todayISO(),
     due_date: "",
-    amountBaht: 0,
+    subtotalBaht: 0,
+    vat_amountBaht: 0,
+    wht_amountBaht: 0,
+    vat_rate_id: undefined,
+    wht_rate_id: undefined,
     is_recurring: false,
     recurring_interval: undefined,
     notes: "",
@@ -65,6 +71,7 @@ export default async function NewInvoicePage() {
           <InvoiceForm
             clients={clients}
             projects={projects}
+            taxes={taxes}
             defaultValues={defaultValues}
             submitLabel="Create invoice"
             action={createInvoice}

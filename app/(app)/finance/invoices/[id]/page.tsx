@@ -32,6 +32,7 @@ import {
   TableCell,
 } from "@/components/ui/table"
 
+import { getTaxRates } from "@/lib/accounting/tax-actions"
 import { updateInvoice } from "../../actions"
 import {
   InvoiceForm,
@@ -56,6 +57,7 @@ const PAYMENT_METHOD_LABEL: Record<Enums<"payment_method">, string> = {
 const ACCOUNTING_PROVIDER_LABEL: Record<Enums<"accounting_provider">, string> = {
   flowaccount: "FlowAccount",
   peak: "PEAK",
+  trcloud: "TRCLOUD",
   xero: "Xero",
 }
 
@@ -74,7 +76,7 @@ export default async function InvoiceDetailPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  await requireOrgContext()
+  const ctx = await requireOrgContext()
   const supabase = await createClient()
   const today = todayISO()
 
@@ -89,7 +91,7 @@ export default async function InvoiceDetailPage({
     supabase
       .from("invoices")
       .select(
-        "id, number, amount_satang, status, issue_date, due_date, is_recurring, recurring_interval, notes, client_id, project_id, clients(name), projects(name)"
+        "id, org_id, number, amount_satang, subtotal_satang, vat_amount_satang, wht_amount_satang, vat_rate_id, wht_rate_id, status, issue_date, due_date, is_recurring, recurring_interval, notes, client_id, project_id, clients(name), projects(name)"
       )
       .eq("id", id)
       .maybeSingle(),
@@ -116,6 +118,7 @@ export default async function InvoiceDetailPage({
       .limit(1),
   ])
 
+  const taxes = await getTaxRates(invoiceRes.data?.org_id || ctx.orgId)
   const invoice = invoiceRes.data
   if (!invoice) notFound()
 
@@ -143,7 +146,11 @@ export default async function InvoiceDetailPage({
     status: invoice.status,
     issue_date: invoice.issue_date ?? "",
     due_date: invoice.due_date ?? "",
-    amountBaht: satangToBaht(invoice.amount_satang),
+    subtotalBaht: satangToBaht(invoice.subtotal_satang),
+    vat_amountBaht: satangToBaht(invoice.vat_amount_satang),
+    wht_amountBaht: satangToBaht(invoice.wht_amount_satang),
+    vat_rate_id: invoice.vat_rate_id ?? undefined,
+    wht_rate_id: invoice.wht_rate_id ?? undefined,
     is_recurring: invoice.is_recurring,
     recurring_interval: invoice.recurring_interval ?? undefined,
     notes: invoice.notes ?? "",
@@ -315,6 +322,7 @@ export default async function InvoiceDetailPage({
           <InvoiceForm
             clients={clients}
             projects={projects}
+            taxes={taxes}
             defaultValues={defaultValues}
             submitLabel="Save changes"
             action={saveInvoice}

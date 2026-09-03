@@ -246,3 +246,68 @@ export async function toggleActivityDone(
   revalidatePath(`/deals/${dealId}`)
   return {}
 }
+
+const QuickLeadInput = z.object({
+  clientName: z.string().min(1, "กรุณากรอกชื่อลูกค้า"),
+  phone: z.string().optional(),
+  valueBaht: z.coerce.number().min(0, "ยอดเงินต้องไม่ติดลบ"),
+})
+
+export type QuickLeadInput = z.infer<typeof QuickLeadInput>
+
+export async function createQuickLead(input: QuickLeadInput): Promise<{ error?: string }> {
+  const ctx = await requireOrgContext()
+  const parsed = QuickLeadInput.safeParse(input)
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "ข้อมูลไม่ถูกต้อง" }
+  const d = parsed.data
+
+  const supabase = await createSupabaseClient()
+  
+  // 1. Create Client
+  const { data: client, error: clientErr } = await supabase
+    .from("clients")
+    .insert({
+      org_id: ctx.orgId,
+      owner: ctx.userId,
+      name: d.clientName.trim(),
+    })
+    .select("id")
+    .single()
+    
+  if (clientErr) return { error: clientErr.message }
+
+  // 2. Create Contact for phone if provided
+  if (d.phone && d.phone.trim() !== "") {
+    await supabase.from("contacts").insert({
+      org_id: ctx.orgId,
+      client_id: client.id,
+      name: d.clientName.trim(),
+      phone: d.phone.trim(),
+    })
+  }
+
+  // 3. Create Deal
+  const { data: deal, error: dealErr } = await supabase
+    .from("deals")
+    .insert({
+      org_id: ctx.orgId,
+      client_id: client.id,
+      title: `งานของ ${d.clientName.trim()}`,
+      stage: "lead",
+      value_satang: bahtToSatang(d.valueBaht),
+    })
+    .select("id")
+    .single()
+
+  if (dealErr) return { error: dealErr.message }
+
+  await writeAudit(ctx, {
+    entity: "deal",
+    entityId: deal.id,
+    action: "created",
+    summary: `เพิ่มลูกค้าใหม่ "${d.clientName.trim()}"`,
+  })
+
+  revalidatePath("/deals")
+  redirect(`/deals`)
+}

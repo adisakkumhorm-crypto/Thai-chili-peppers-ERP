@@ -1,7 +1,7 @@
 "use client"
 
-import { useState } from "react"
-import { useForm } from "react-hook-form"
+import { useState, useEffect } from "react"
+import { useForm, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { Trash2, Plus } from "lucide-react"
@@ -27,10 +27,12 @@ type POItem = {
   quantity: number
   unit_price: number
   products: { name: string; sku: string | null }
+  projects?: { name: string } | null
 }
 
 const AddItemSchema = z.object({
   product_id: z.string().uuid("Select a product"),
+  project_id: z.string().nullable().optional().or(z.literal("")),
   quantity: z.coerce.number().int().min(1, "Quantity must be at least 1"),
   unit_price: z.coerce.number().min(0, "Price must be >= 0"),
 })
@@ -39,12 +41,14 @@ export function POItemsTable({
   poId,
   items,
   products,
+  projects,
   isEditable,
   totalAmount,
 }: {
   poId: string
   items: POItem[]
   products: { id: string; name: string; cost: number }[]
+  projects: { id: string; name: string }[]
   isEditable: boolean
   totalAmount: number
 }) {
@@ -53,6 +57,7 @@ export function POItemsTable({
     resolver: zodResolver(AddItemSchema) as any,
     defaultValues: {
       product_id: "",
+      project_id: "",
       quantity: 1,
       unit_price: 0,
     },
@@ -79,7 +84,10 @@ export function POItemsTable({
     }
   }
 
-  const selectedProductId = form.watch("product_id")
+  const selectedProductId = useWatch({
+    control: form.control,
+    name: "product_id",
+  })
   
   // Auto-fill unit_price when a product is selected
   const handleProductChange = (val: string | null) => {
@@ -93,21 +101,32 @@ export function POItemsTable({
 
   return (
     <div className="space-y-4">
-      <div className="rounded-xl ring-1 ring-foreground/10 overflow-x-auto">
+      <div className="rounded-xl ring-1 ring-foreground/10 overflow-x-auto print:ring-0 print:border-y print:rounded-none">
         <Table>
-          <TableHeader>
+          <TableHeader className="print:hidden">
             <TableRow>
               <TableHead>Product</TableHead>
+              <TableHead>Project</TableHead>
               <TableHead className="text-right">Qty</TableHead>
               <TableHead className="text-right">Unit Price (฿)</TableHead>
               <TableHead className="text-right">Total (฿)</TableHead>
-              {isEditable && <TableHead className="w-[50px]"></TableHead>}
+              {isEditable && <TableHead className="w-[50px] print:hidden"></TableHead>}
             </TableRow>
           </TableHeader>
+          {/* Create a cleaner header for print */}
+          <thead className="hidden print:table-header-group border-b">
+            <tr>
+              <th className="text-left font-medium pb-2 text-sm">Product</th>
+              <th className="text-left font-medium pb-2 text-sm">Project</th>
+              <th className="text-right font-medium pb-2 text-sm w-[100px]">Qty</th>
+              <th className="text-right font-medium pb-2 text-sm w-[120px]">Unit Price (฿)</th>
+              <th className="text-right font-medium pb-2 text-sm w-[120px]">Total (฿)</th>
+            </tr>
+          </thead>
           <TableBody>
             {items.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={isEditable ? 5 : 4} className="text-center text-muted-foreground py-6">
+                <TableCell colSpan={isEditable ? 6 : 5} className="text-center text-muted-foreground py-6">
                   No items in this order yet.
                 </TableCell>
               </TableRow>
@@ -118,7 +137,14 @@ export function POItemsTable({
                     <div className="font-medium">{item.products?.name}</div>
                     {item.products?.sku && <div className="text-xs text-muted-foreground">{item.products.sku}</div>}
                   </TableCell>
-                  <TableCell className="text-right">{item.quantity}</TableCell>
+                  <TableCell>
+                  {item.projects ? (
+                    <span className="text-xs bg-muted px-2 py-1 rounded-md border">{item.projects.name}</span>
+                  ) : (
+                    <span className="text-xs text-muted-foreground">-</span>
+                  )}
+                </TableCell>
+                <TableCell className="text-right">{item.quantity}</TableCell>
                   <TableCell className="text-right">{item.unit_price.toFixed(2)}</TableCell>
                   <TableCell className="text-right font-medium">{(item.quantity * item.unit_price).toFixed(2)}</TableCell>
                   {isEditable && (
@@ -133,7 +159,7 @@ export function POItemsTable({
             )}
             {items.length > 0 && (
                <TableRow className="bg-muted/50">
-                 <TableCell colSpan={3} className="text-right font-semibold">Total Amount</TableCell>
+                 <TableCell colSpan={4} className="text-right font-semibold">Total Amount</TableCell>
                  <TableCell className="text-right font-bold text-primary">฿{totalAmount.toFixed(2)}</TableCell>
                  {isEditable && <TableCell></TableCell>}
                </TableRow>
@@ -156,6 +182,20 @@ export function POItemsTable({
                     </SelectTrigger>
                     <SelectContent>
                       {products.map(p => (
+                        <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5 flex-1 min-w-[150px]">
+                  <label className="text-xs font-medium text-muted-foreground">Project (Optional)</label>
+                  <Select onValueChange={(val) => form.setValue("project_id", val === "none" ? "" : val)} value={form.watch("project_id") || "none"}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Central Stock" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">-- Central Stock --</SelectItem>
+                      {projects.map(p => (
                         <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
                       ))}
                     </SelectContent>

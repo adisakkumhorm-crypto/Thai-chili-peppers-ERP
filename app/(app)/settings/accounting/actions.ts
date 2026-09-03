@@ -7,7 +7,7 @@ import { createClient } from "@/lib/supabase/server"
 import { requireOrgContext, requireRole } from "@/lib/auth"
 import { writeAudit } from "@/lib/audit"
 
-const PROVIDERS = ["flowaccount", "peak", "xero"] as const
+const PROVIDERS = ["flowaccount", "peak", "trcloud", "xero"] as const
 
 const ConnectAccounting = z.object({
   provider: z.enum(PROVIDERS),

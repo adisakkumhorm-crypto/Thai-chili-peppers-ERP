@@ -24,6 +24,7 @@ export const dynamic = "force-dynamic"
 const PROVIDER_LABEL: Record<Enums<"accounting_provider">, string> = {
   flowaccount: "FlowAccount",
   peak: "PEAK",
+  trcloud: "TRCLOUD",
   xero: "Xero",
 }
 
@@ -67,7 +68,7 @@ export default async function AccountingSettingsPage() {
         <PlugZap className="size-4" />
         <AlertTitle>Sync scaffold — not an accounting engine</AlertTitle>
         <AlertDescription>
-          This maps invoices to your provider (FlowAccount, PEAK or Xero) and
+          This maps invoices to your provider (FlowAccount, PEAK, TRCLOUD or Xero) and
           records the mapping. It does not create tax invoices or compute VAT,
           and the live push is stubbed in this build.
         </AlertDescription>

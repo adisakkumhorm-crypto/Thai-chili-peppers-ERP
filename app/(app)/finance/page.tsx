@@ -8,10 +8,11 @@ import {
   ReceiptText,
   Receipt,
   Coins,
+  BookText,
 } from "lucide-react"
 
 import { createClient } from "@/lib/supabase/server"
-import { requireOrgContext } from "@/lib/auth"
+import { requireOrgContext, requireFeatureAccessOrRedirect } from "@/lib/auth"
 import { currentMonthKey, todayISO } from "@/lib/dates"
 import { formatTHB } from "@/lib/money"
 import {
@@ -27,7 +28,6 @@ import {
 } from "@/lib/metrics/invoice-status"
 import type { Enums } from "@/lib/types/database"
 
-import { Constants } from "@/lib/types/database"
 import { PageHeader } from "@/components/page-header"
 import { StatCard } from "@/components/stat-card"
 import { EmptyState } from "@/components/empty-state"
@@ -51,7 +51,7 @@ import type { ViewConfig } from "@/app/(app)/views/view-config"
 
 export const dynamic = "force-dynamic"
 
-const INVOICE_STATUSES = Constants.public.Enums.invoice_status
+const INVOICE_STATUSES = ["draft", "sent", "partially_paid", "paid", "overdue", "cancelled"]
 
 /** Pull the known filter keys out of a saved-view config row. */
 function toViewConfig(config: unknown): ViewConfig {
@@ -74,6 +74,7 @@ export default async function FinancePage({
   searchParams: Promise<{ status?: string }>
 }) {
   const ctx = await requireOrgContext()
+  requireFeatureAccessOrRedirect(ctx, "/finance")
   const supabase = await createClient()
   const month = currentMonthKey()
   const today = todayISO()
@@ -85,7 +86,7 @@ export default async function FinancePage({
     ? statusParam!
     : ""
 
-  const [invoicesRes, paymentsRes, costsRes, viewsRes] = await Promise.all([
+  const [invoicesRes, paymentsRes, costsRes, viewsRes, journalsRes] = await Promise.all([
     supabase
       .from("invoices")
       .select(
@@ -105,11 +106,17 @@ export default async function FinancePage({
       .eq("module", "finance")
       .eq("user_id", ctx.userId)
       .order("created_at", { ascending: true }),
+    supabase
+      .from("journal_entries")
+      .select("id, entry_date, entry_number, description, status, source")
+      .eq("org_id", ctx.orgId)
+      .order("entry_date", { ascending: false }),
   ])
 
   const invoices = invoicesRes.data ?? []
   const payments = paymentsRes.data ?? []
   const costs = costsRes.data ?? []
+  const journals = journalsRes.data ?? []
 
   const savedViews: SavedView[] = (viewsRes.data ?? []).map((v) => ({
     id: v.id,
@@ -166,8 +173,11 @@ export default async function FinancePage({
     <div className="space-y-6">
       <PageHeader
         title="Finance"
-        description="Invoices, payments, and operating costs at a glance."
+        description="Invoices, payments, operating costs, and journal entries."
       >
+        <Button variant="outline" render={<Link href="/finance/journals/new" />}>
+          <BookText /> New Journal
+        </Button>
         <Button variant="outline" render={<Link href="/finance/costs/new" />}>
           <Coins /> New cost
         </Button>
@@ -215,6 +225,9 @@ export default async function FinancePage({
           </TabsTrigger>
           <TabsTrigger value="costs">
             <Receipt /> Costs
+          </TabsTrigger>
+          <TabsTrigger value="journals">
+            <BookText /> Journals
           </TabsTrigger>
         </TabsList>
 
@@ -345,6 +358,66 @@ export default async function FinancePage({
                             id={c.id}
                             label={`${COST_CATEGORY_LABEL[c.category]} cost`}
                           />
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="journals">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Journal Entries (สมุดรายวัน)</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {journals.length === 0 ? (
+                <EmptyState
+                  icon={BookText}
+                  title="No journal entries"
+                  description="สมุดรายวันว่างเปล่า"
+                  action={
+                    <Button render={<Link href="/finance/journals/new" />}>
+                      <BookText /> New Journal
+                    </Button>
+                  }
+                  className="border-0"
+                />
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Entry No.</TableHead>
+                      <TableHead>Description</TableHead>
+                      <TableHead>Source</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {journals.map((j) => (
+                      <TableRow key={j.id}>
+                        <TableCell className="text-muted-foreground">
+                          {j.entry_date}
+                        </TableCell>
+                        <TableCell className="font-medium">
+                          <Link href={`/finance/journals/${j.id}`} className="hover:underline">
+                            {j.entry_number}
+                          </Link>
+                        </TableCell>
+                        <TableCell>{j.description}</TableCell>
+                        <TableCell className="capitalize">{j.source}</TableCell>
+                        <TableCell>
+                          {j.status === "posted" ? (
+                            <span className="text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full text-xs font-medium">Posted</span>
+                          ) : j.status === "draft" ? (
+                            <span className="text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full text-xs font-medium">Draft</span>
+                          ) : (
+                            <span className="text-red-600 bg-red-50 px-2 py-0.5 rounded-full text-xs font-medium">Cancelled</span>
+                          )}
                         </TableCell>
                       </TableRow>
                     ))}

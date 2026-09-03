@@ -10,7 +10,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { formatDate } from "@/app/(app)/clients/_lib/format"
 import { POStatusBadge } from "../_components/po-status-badge"
 import { POItemsTable } from "./_components/po-items-table"
-import { updatePOStatus } from "../actions"
+import { PrintPOButton } from "./_components/print-po-button"
+import { ReceivePODialog } from "./_components/receive-po-dialog"
+import { CreateBillButton } from "./_components/create-bill-button"
+import { updatePOStatus, requestPOApproval, approvePO } from "../actions"
 
 export default async function PODetailPage({
   params,
@@ -21,7 +24,7 @@ export default async function PODetailPage({
   const ctx = await requireOrgContext()
   const supabase = await createClient()
 
-  const [poRes, itemsRes, productsRes] = await Promise.all([
+  const [poRes, itemsRes, productsRes, projectsRes] = await Promise.all([
     supabase
       .from("purchase_orders")
       .select("*, suppliers(id, name, email)")
@@ -30,15 +33,25 @@ export default async function PODetailPage({
       .maybeSingle(),
     supabase
       .from("purchase_order_items")
-      .select("*, products(name, sku)")
+      .select("*, products(name, sku), projects(name)")
       .eq("po_id", id)
       .order("created_at", { ascending: true }),
     supabase.from("products").select("id, name, cost").order("name"),
+    supabase.from("projects").select("id, name").in("status", ["not_started", "in_progress"]).order("name"),
   ])
 
   const po = poRes.data
+  
+  const userIds = [po?.requested_by, po?.approved_by].filter(Boolean) as string[]
+  const { data: profiles } = userIds.length > 0 
+    ? await supabase.from("profiles").select("id, full_name").in("id", userIds)
+    : { data: [] }
+    
+  const requestedBy = profiles?.find(p => p.id === po?.requested_by)?.full_name || "Unknown"
+  const approvedBy = profiles?.find(p => p.id === po?.approved_by)?.full_name || "Unknown"
   const items = itemsRes.data ?? []
   const products = productsRes.data ?? []
+  const projects = projectsRes?.data ?? []
 
   if (!po) notFound()
 
@@ -47,16 +60,17 @@ export default async function PODetailPage({
   return (
     <div className="space-y-6">
       <PageHeader title={po.po_number} description="Purchase Order Details">
-        <Button variant="ghost" size="sm" render={<Link href="/purchases" />}>
+        <Button variant="ghost" size="sm" render={<Link href="/purchases" />} className="print:hidden">
           <ArrowLeft />
           Back
         </Button>
         {isEditable && (
-          <Button variant="outline" size="sm" render={<Link href={`/purchases/${po.id}/edit`} />}>
+          <Button variant="outline" size="sm" render={<Link href={`/purchases/${po.id}/edit`} />} className="print:hidden">
             <Pencil />
             Edit
           </Button>
         )}
+        <PrintPOButton />
       </PageHeader>
 
       <div className="grid gap-6 md:grid-cols-3">
@@ -72,6 +86,7 @@ export default async function PODetailPage({
                 poId={po.id} 
                 items={items as any} 
                 products={products}
+                projects={projects}
                 isEditable={isEditable}
                 totalAmount={po.total_amount}
               />
@@ -89,31 +104,46 @@ export default async function PODetailPage({
                 <span className="text-muted-foreground text-sm">Status</span>
                 <POStatusBadge status={po.status} />
               </div>
+              {po.requested_by && (
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground text-sm">Requested By</span>
+                  <span className="text-sm font-medium">{requestedBy}</span>
+                </div>
+              )}
+              {po.approved_by && (
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground text-sm">Approved By</span>
+                  <span className="text-sm font-medium">{approvedBy}</span>
+                </div>
+              )}
               <div className="flex justify-between items-center">
                 <span className="text-muted-foreground text-sm">Total</span>
                 <span className="font-semibold">฿{po.total_amount.toFixed(2)}</span>
               </div>
               
               {isEditable && (
-                <div className="pt-4 space-y-2 border-t mt-4">
+                <div className="pt-4 space-y-2 border-t mt-4 print:hidden">
                   {po.status === "draft" && (
                     <form action={async () => {
                       "use server"
-                      await updatePOStatus(po.id, "ordered")
+                      await requestPOApproval(po.id)
                     }}>
-                      <Button className="w-full" type="submit">Mark as Ordered</Button>
+                      <Button className="w-full" type="submit">Request Approval</Button>
                     </form>
                   )}
-                  {po.status === "ordered" && (
+                  {po.status === "pending_approval" && (
                     <form action={async () => {
                       "use server"
-                      await updatePOStatus(po.id, "received")
+                      await approvePO(po.id)
                     }}>
-                      <Button className="w-full" variant="default" type="submit">
-                        <CheckCircle2 className="mr-2 size-4" />
-                        Receive & Update Stock
-                      </Button>
+                      <Button className="w-full bg-green-600 hover:bg-green-700 text-white" type="submit">Approve Order</Button>
                     </form>
+                  )}
+                  {(po.status === "ordered" || po.status === "partially_received") && (
+                    <ReceivePODialog poId={po.id} items={items as any} />
+                  )}
+                  {(po.status === "partially_received" || po.status === "received") && (
+                    <CreateBillButton poId={po.id} />
                   )}
                   <form action={async () => {
                     "use server"

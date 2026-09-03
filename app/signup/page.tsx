@@ -1,8 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
-import { CheckCircle2, Loader2 } from "lucide-react"
+import { CheckCircle2, Loader2, Eye, EyeOff } from "lucide-react"
 import { toast } from "sonner"
 
 import { signUp } from "@/app/signup/actions"
@@ -24,6 +24,13 @@ export default function SignupPage() {
   const [password, setPassword] = useState("")
   const [loading, setLoading] = useState(false)
   const [done, setDone] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
+
+  // Fix hydration issue from password managers
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   // Live policy check so the user sees every failing rule before submitting.
   const policy = validatePassword(password)
@@ -34,7 +41,7 @@ export default function SignupPage() {
 
     const check = validatePassword(password)
     if (!check.ok) {
-      toast.error("Choose a stronger password", {
+      toast.error("กรุณาตั้งรหัสผ่านให้ปลอดภัยยิ่งขึ้น", {
         description: check.issues.join(" "),
       })
       return
@@ -45,10 +52,14 @@ export default function SignupPage() {
     setLoading(false)
 
     if (!result.ok) {
-      toast.error("Sign up failed", { description: result.error })
+      toast.error("สมัครสมาชิกไม่สำเร็จ", { description: result.error })
       return
     }
     setDone(true)
+  }
+
+  if (!mounted) {
+    return <div className="flex min-h-svh items-center justify-center p-4"></div>
   }
 
   if (done) {
@@ -58,12 +69,11 @@ export default function SignupPage() {
           <CardHeader>
             <div className="flex items-center gap-2">
               <CheckCircle2 className="text-primary size-5" />
-              <CardTitle className="text-xl">Check your email</CardTitle>
+              <CardTitle className="text-xl">สมัครสมาชิกสำเร็จ</CardTitle>
             </div>
             <CardDescription>
-              We sent a confirmation link to{" "}
-              <span className="font-medium">{email}</span>. Click it to confirm
-              your account, then sign in.
+              บัญชี <span className="font-medium">{email}</span> ถูกสร้างเรียบร้อยแล้ว<br /><br />
+              ระบบได้ส่งคำขอเข้าร่วมทีมโดยอัตโนมัติ <b>กรุณารอคุณโออนุมัติสิทธิ์</b> จึงจะสามารถเข้าสู่ระบบได้ค่ะ
             </CardDescription>
           </CardHeader>
           <CardFooter>
@@ -72,7 +82,7 @@ export default function SignupPage() {
               className="w-full"
               render={<Link href="/login" />}
             >
-              Back to sign in
+              กลับไปหน้าเข้าสู่ระบบ
             </Button>
           </CardFooter>
         </Card>
@@ -81,18 +91,18 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="flex min-h-svh items-center justify-center p-4">
-      <Card className="w-full max-w-sm">
+    <div className="flex min-h-svh items-center justify-center p-4" suppressHydrationWarning>
+      <Card className="w-full max-w-sm" suppressHydrationWarning>
         <CardHeader>
-          <CardTitle className="text-xl">Create your account</CardTitle>
+          <CardTitle className="text-xl">สมัครสมาชิกใหม่ (Sign Up)</CardTitle>
           <CardDescription>
-            Sign up for the Thai Chili Peppers Company OS.
+            สร้างบัญชีเพื่อเข้าใช้งานระบบ Thai Chili Peppers ERP
           </CardDescription>
         </CardHeader>
-        <form onSubmit={onSubmit}>
+        <form onSubmit={onSubmit} suppressHydrationWarning>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">อีเมล (Email)</Label>
               <Input
                 id="email"
                 type="email"
@@ -104,16 +114,30 @@ export default function SignupPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                autoComplete="new-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                aria-invalid={showPolicy}
-                required
-              />
+              <Label htmlFor="password">รหัสผ่าน (Password)</Label>
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  autoComplete="new-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  aria-invalid={showPolicy}
+                  required
+                  className="pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-0 flex items-center pr-3 text-muted-foreground hover:text-foreground"
+                >
+                  {showPassword ? (
+                    <EyeOff className="size-4" />
+                  ) : (
+                    <Eye className="size-4" />
+                  )}
+                </button>
+              </div>
               {showPolicy ? (
                 <ul className="text-destructive space-y-1 text-xs">
                   {policy.issues.map((issue) => (
@@ -122,7 +146,7 @@ export default function SignupPage() {
                 </ul>
               ) : (
                 <p className="text-muted-foreground text-xs">
-                  At least 10 characters with upper, lower, and a number.
+                  ความยาวอย่างน้อย 6 ตัวอักษร
                 </p>
               )}
             </div>
@@ -136,15 +160,18 @@ export default function SignupPage() {
               {loading ? (
                 <Loader2 className="size-4 animate-spin" />
               ) : (
-                "Create account"
+                "สมัครสมาชิก (Create account)"
               )}
             </Button>
-            <p className="text-muted-foreground text-center text-xs">
-              Already have an account?{" "}
-              <Link href="/login" className="underline underline-offset-4">
-                Sign in
-              </Link>
-            </p>
+            
+            <div className="relative w-full text-center py-2">
+              <span className="text-muted-foreground text-xs bg-card px-2 relative z-10">หรือ</span>
+              <div className="absolute left-0 top-1/2 w-full border-t border-border"></div>
+            </div>
+            
+            <Button variant="outline" type="button" className="w-full" render={<Link href="/login" />}>
+              มีบัญชีอยู่แล้ว? เข้าสู่ระบบ
+            </Button>
           </CardFooter>
         </form>
       </Card>

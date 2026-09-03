@@ -1,12 +1,11 @@
 import Link from "next/link"
-import { Wallet, Flame, Users, Lock, PlugZap, ChevronRight } from "lucide-react"
+import { Wallet, Flame, PlugZap, ChevronRight, BookText, Percent, Lock } from "lucide-react"
 
 import { createClient } from "@/lib/supabase/server"
 import { requireOrgContext } from "@/lib/auth"
 import { formatTHB, satangToBaht } from "@/lib/money"
 import { PageHeader } from "@/components/page-header"
 import { StatCard } from "@/components/stat-card"
-import { EmptyState } from "@/components/empty-state"
 import {
   Card,
   CardContent,
@@ -14,21 +13,11 @@ import {
   CardTitle,
   CardDescription,
 } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { SettingsForm } from "./_components/settings-form"
 import { updateOrgSettings } from "./actions"
 
 export const dynamic = "force-dynamic"
-
-function initials(name: string | null, fallback: string): string {
-  const base = name?.trim() || fallback
-  const parts = base.split(/\s+/).filter(Boolean)
-  if (parts.length === 0) return "?"
-  if (parts.length === 1) return parts[0]!.slice(0, 2).toUpperCase()
-  return (parts[0]![0]! + parts[parts.length - 1]![0]!).toUpperCase()
-}
 
 export default async function SettingsPage() {
   const ctx = await requireOrgContext()
@@ -45,44 +34,14 @@ export default async function SettingsPage() {
   const cashSatang = settings?.cash_balance_satang ?? 0
   const burnSatang = settings?.monthly_burn_satang ?? null
 
-  // Team: memberships have no PostgREST FK embed to profiles, so fetch both and
-  // join in memory. RLS lets co-members read each other's profiles.
-  const { data: members } = await supabase
-    .from("memberships")
-    .select("user_id, role, created_at")
-    .eq("org_id", ctx.orgId)
-    .order("created_at", { ascending: true })
-
-  const userIds = (members ?? []).map((m) => m.user_id)
-  const { data: profiles } = userIds.length
-    ? await supabase
-        .from("profiles")
-        .select("id, full_name")
-        .in("id", userIds)
-    : { data: [] as { id: string; full_name: string | null }[] }
-
-  const nameById = new Map(
-    (profiles ?? []).map((p) => [p.id, p.full_name] as const)
-  )
-
-  const team = (members ?? []).map((m) => ({
-    userId: m.user_id,
-    role: m.role,
-    fullName: nameById.get(m.user_id) ?? null,
-    // Email isn't stored on profiles (it lives in auth.users, hidden by RLS).
-    // We can only surface the signed-in user's own email reliably.
-    email: m.user_id === ctx.userId ? ctx.email : null,
-    isSelf: m.user_id === ctx.userId,
-  }))
-
   return (
     <div className="space-y-6">
       <PageHeader
         title="Settings"
-        description="Workspace finances and your team. Cash here drives the dashboard."
+        description="Workspace finances and system settings."
       />
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <StatCard
           label="Cash on hand"
           value={formatTHB(cashSatang)}
@@ -95,14 +54,9 @@ export default async function SettingsPage() {
           tone={burnSatang === null ? "default" : "warning"}
           hint={burnSatang === null ? "Using actual recorded costs" : undefined}
         />
-        <StatCard
-          label="Team members"
-          value={String(team.length)}
-          icon={Users}
-        />
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-6">
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Workspace</CardTitle>
@@ -149,56 +103,31 @@ export default async function SettingsPage() {
             )}
           </CardContent>
         </Card>
-
+        
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Team</CardTitle>
-            <CardDescription>People with access to this workspace.</CardDescription>
+            <CardTitle className="text-base">HR Settings</CardTitle>
+            <CardDescription>
+              การตั้งค่าบริษัทสำหรับระบบจัดการบุคคล (HR)
+            </CardDescription>
           </CardHeader>
-          <CardContent>
-            {team.length === 0 ? (
-              <EmptyState
-                icon={Users}
-                title="No team members"
-                description="Invitations will appear here once teammates join."
-                className="border-0 p-6"
-              />
-            ) : (
-              <ul className="divide-y">
-                {team.map((member) => (
-                  <li
-                    key={member.userId}
-                    className="flex items-center gap-3 py-2.5"
-                  >
-                    <Avatar className="size-9 shrink-0">
-                      <AvatarFallback className="text-xs">
-                        {initials(member.fullName, member.email ?? "?")}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className="truncate text-sm font-medium">
-                          {member.fullName ?? "Unnamed teammate"}
-                        </span>
-                        {member.isSelf ? (
-                          <Badge variant="secondary" className="shrink-0">
-                            You
-                          </Badge>
-                        ) : null}
-                      </div>
-                      {member.email ? (
-                        <p className="text-muted-foreground truncate text-xs">
-                          {member.email}
-                        </p>
-                      ) : null}
-                    </div>
-                    <Badge variant="outline" className="shrink-0 capitalize">
-                      {member.role}
-                    </Badge>
-                  </li>
-                ))}
-              </ul>
-            )}
+          <CardContent className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-2">
+              <Link
+                href="/settings/hr"
+                className="hover:bg-accent flex items-center gap-3 rounded-lg border p-3 transition-colors"
+              >
+                <div className="flex size-10 shrink-0 items-center justify-center rounded-md bg-emerald-500/10 text-emerald-500">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="size-5"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
+                </div>
+                <div>
+                  <div className="font-medium">วันทำงาน & วันหยุด</div>
+                  <div className="text-muted-foreground text-xs">
+                    ตั้งค่า Working days, Public holidays
+                  </div>
+                </div>
+              </Link>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -210,22 +139,54 @@ export default async function SettingsPage() {
             Connect Thai Chili Peppers to the tools you already use.
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <Link
-            href="/settings/accounting"
-            className="hover:bg-accent flex items-center gap-3 rounded-lg border p-3 transition-colors"
-          >
-            <div className="bg-muted flex size-9 shrink-0 items-center justify-center rounded-md">
-              <PlugZap className="size-4" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium">Accounting sync</p>
-              <p className="text-muted-foreground truncate text-xs">
-                Scaffold invoice syncing to FlowAccount, PEAK or Xero.
-              </p>
-            </div>
-            <ChevronRight className="text-muted-foreground size-4 shrink-0" />
-          </Link>
+        <CardContent className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-2">
+            <Link
+              href="/settings/accounts"
+              className="hover:bg-accent flex items-center gap-3 rounded-lg border p-3 transition-colors"
+            >
+              <div className="bg-muted flex size-9 shrink-0 items-center justify-center rounded-md">
+                <BookText className="size-4" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium">Chart of Accounts</p>
+                <p className="text-muted-foreground truncate text-xs">
+                  Manage ledger accounts (Assets, Liabilities, Equity, etc.)
+                </p>
+              </div>
+              <ChevronRight className="text-muted-foreground size-4 shrink-0" />
+            </Link>
+            <Link
+              href="/settings/accounting"
+              className="hover:bg-accent flex items-center gap-3 rounded-lg border p-3 transition-colors"
+            >
+              <div className="bg-muted flex size-9 shrink-0 items-center justify-center rounded-md">
+                <PlugZap className="size-4" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium">Accounting sync</p>
+                <p className="text-muted-foreground truncate text-xs">
+                  Scaffold invoice syncing to FlowAccount, PEAK or Xero.
+                </p>
+              </div>
+              <ChevronRight className="text-muted-foreground size-4 shrink-0" />
+            </Link>
+            <Link
+              href="/settings/taxes"
+              className="hover:bg-accent flex items-center gap-3 rounded-lg border p-3 transition-colors"
+            >
+              <div className="bg-muted flex size-9 shrink-0 items-center justify-center rounded-md">
+                <Percent className="size-4" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium">Tax Rates</p>
+                <p className="text-muted-foreground truncate text-xs">
+                  Configure VAT and Withholding Tax (WHT) rates.
+                </p>
+              </div>
+              <ChevronRight className="text-muted-foreground size-4 shrink-0" />
+            </Link>
+          </div>
         </CardContent>
       </Card>
     </div>
