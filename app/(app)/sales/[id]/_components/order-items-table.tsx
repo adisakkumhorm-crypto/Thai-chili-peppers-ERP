@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { addOrderItem, deleteOrderItem } from "../../actions"
 
 const AddItemSchema = z.object({
+  location_id: z.string().uuid("Select a location"),
   product_id: z.string().uuid("Select a product"),
   quantity: z.coerce.number().int().min(1, "Quantity must be at least 1"),
   unit_price: z.coerce.number().min(0, "Price must be >= 0"),
@@ -21,23 +22,25 @@ export function OrderItemsTable({
   orderId,
   items,
   products,
+  locations,
   isEditable,
   totalAmount,
 }: {
   orderId: string
   items: any[]
   products: { id: string; name: string; price: number; stock_quantity: number; barcode: string | null }[]
+  locations: { id: string; name: string }[]
   isEditable: boolean
   totalAmount: number
 }) {
   const [isAdding, setIsAdding] = useState(false)
   const form = useForm<z.infer<typeof AddItemSchema>>({
     resolver: zodResolver(AddItemSchema) as any,
-    defaultValues: { product_id: "", quantity: 1, unit_price: 0 },
+    defaultValues: { product_id: "", location_id: "", quantity: 1, unit_price: 0 },
   })
 
   async function onSubmit(values: z.infer<typeof AddItemSchema>) {
-    const res = await addOrderItem({ ...values, order_id: orderId })
+    const res = await addOrderItem({ ...values, order_id: orderId, location_id: values.location_id as string })
     if (res?.error) {
       toast.error(res.error)
       return
@@ -115,7 +118,7 @@ export function OrderItemsTable({
           {isAdding ? (
             <div className="border rounded-lg p-4 space-y-4 bg-muted/20">
               <form onSubmit={form.handleSubmit(onSubmit)} className="flex items-end gap-3 flex-wrap sm:flex-nowrap">
-                <div className="space-y-1.5 flex-1 min-w-[200px]">
+                                <div className="space-y-1.5 flex-1 min-w-[200px]">
                   <label className="text-xs font-medium">Product</label>
                   <Select onValueChange={handleProductChange} value={form.watch("product_id")}>
                     <SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger>
@@ -123,6 +126,19 @@ export function OrderItemsTable({
                       {products.map(p => (
                         <SelectItem key={p.id} value={p.id}>
                           {p.name} (Stock: {p.stock_quantity}) - ฿{p.price}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5 flex-1 min-w-[150px]">
+                  <label className="text-xs font-medium">Location</label>
+                  <Select onValueChange={(val) => { if (val) form.setValue("location_id", val) }} value={form.watch("location_id")}>
+                    <SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger>
+                    <SelectContent>
+                      {locations.map(loc => (
+                        <SelectItem key={loc.id} value={loc.id}>
+                          {loc.name}
                         </SelectItem>
                       ))}
                     </SelectContent>

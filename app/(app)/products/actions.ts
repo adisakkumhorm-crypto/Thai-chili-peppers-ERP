@@ -13,8 +13,7 @@ const ProductInput = z.object({
   description: z.string().optional(),
   price: z.coerce.number().min(0, "Price must be >= 0").default(0),
   cost: z.coerce.number().min(0, "Cost must be >= 0").default(0),
-  stock_quantity: z.coerce.number().int().default(0),
-})
+  })
 
 function nullify(value: string | undefined): string | null {
   const trimmed = value?.trim()
@@ -38,7 +37,6 @@ export async function createProduct(
       description: nullify(parsed.data.description),
       price: parsed.data.price,
       cost: parsed.data.cost,
-      stock_quantity: parsed.data.stock_quantity,
     })
     .select("id")
     .single()
@@ -66,7 +64,6 @@ export async function updateProduct(
       description: nullify(parsed.data.description),
       price: parsed.data.price,
       cost: parsed.data.cost,
-      stock_quantity: parsed.data.stock_quantity,
     })
     .eq("id", id)
     .eq("org_id", ctx.orgId)

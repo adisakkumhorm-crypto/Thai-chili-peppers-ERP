@@ -28,6 +28,7 @@ export const NAV_ITEMS: NavItem[] = [
   { title: "Dashboard (หน้าหลัก)", href: "/dashboard", icon: LayoutDashboard, isBasic: true },
   { title: "Check-in (ตอกบัตร)", href: "/check-in", icon: Camera, isBasic: true },
   { title: "Employee Portal", href: "/my-leave", icon: Calendar, isBasic: true },
+  { title: "My Requests (คำขอของฉัน)", href: "/my-requests", icon: ShoppingCart, isBasic: true },
   { title: "Clients (ลูกค้า)", href: "/clients", icon: Users },
   { title: "Deals (โอกาสการขาย)", href: "/deals", icon: Handshake },
   { title: "Projects (โครงการ)", href: "/projects", icon: FolderKanban },

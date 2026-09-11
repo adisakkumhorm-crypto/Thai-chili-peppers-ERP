@@ -24,8 +24,7 @@ const ProductSchema = z.object({
   description: z.string().optional(),
   price: z.coerce.number().min(0, "Price must be >= 0"),
   cost: z.coerce.number().min(0, "Cost must be >= 0"),
-  stock_quantity: z.coerce.number().int().default(0),
-})
+  })
 
 type ProductValues = z.infer<typeof ProductSchema>
 
@@ -49,7 +48,6 @@ export function ProductForm({
       description: defaultValues?.description ?? "",
       price: defaultValues?.price ?? 0,
       cost: defaultValues?.cost ?? 0,
-      stock_quantity: defaultValues?.stock_quantity ?? 0,
     },
   })
 
@@ -69,48 +67,6 @@ export function ProductForm({
         })}
         className="space-y-4"
       >
-        <FormField
-          control={form.control}
-          name="name"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Product Name</FormLabel>
-              <FormControl>
-                <Input placeholder="e.g. Thai Chili Paste" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <div className="grid gap-4 sm:grid-cols-2">
-          <FormField
-            control={form.control}
-            name="sku"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>SKU</FormLabel>
-                <FormControl>
-                  <Input placeholder="e.g. TCP-001" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="stock_quantity"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Stock Quantity</FormLabel>
-                <FormControl>
-                  <Input type="number" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
           <FormField

@@ -75,7 +75,7 @@ export async function createManualJournalEntry(orgId: string, payload: CreateJou
       description: payload.description,
       source: payload.source ?? "manual",
       reference_id: payload.reference_id,
-      status: "posted" // Assume manual entries are posted immediately
+      status: "draft"
     })
     .select()
     .single();
@@ -101,9 +101,20 @@ export async function createManualJournalEntry(orgId: string, payload: CreateJou
 
   if (linesError) {
     console.error("Error creating journal entry lines:", linesError);
-    // Ideally we should rollback here, but Supabase JS doesn't have explicit transactions yet.
-    // In a real app we might use an edge function or postgres function for atomicity.
+    // Rollback header since we couldn't insert lines
+    await supabase.from("journal_entries").delete().eq("id", header.id);
     throw new Error(linesError.message);
+  }
+
+  // 3. Post Journal
+  const { error: postError } = await supabase
+    .from("journal_entries")
+    .update({ status: "posted" })
+    .eq("id", header.id);
+
+  if (postError) {
+    console.error("Error posting journal entry:", postError);
+    throw new Error(postError.message);
   }
 
   revalidatePath("/finance");

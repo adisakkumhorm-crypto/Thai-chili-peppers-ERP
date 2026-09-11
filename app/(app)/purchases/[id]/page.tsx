@@ -24,7 +24,7 @@ export default async function PODetailPage({
   const ctx = await requireOrgContext()
   const supabase = await createClient()
 
-  const [poRes, itemsRes, productsRes, projectsRes] = await Promise.all([
+  const [poRes, itemsRes, productsRes, projectsRes, locationsRes] = await Promise.all([
     supabase
       .from("purchase_orders")
       .select("*, suppliers(id, name, email)")
@@ -38,6 +38,7 @@ export default async function PODetailPage({
       .order("created_at", { ascending: true }),
     supabase.from("products").select("id, name, cost").order("name"),
     supabase.from("projects").select("id, name").in("status", ["not_started", "in_progress"]).order("name"),
+    supabase.from("inventory_locations").select("id, name").eq("org_id", ctx.orgId).eq("is_active", true).order("name"),
   ])
 
   const po = poRes.data
@@ -52,6 +53,7 @@ export default async function PODetailPage({
   const items = itemsRes.data ?? []
   const products = productsRes.data ?? []
   const projects = projectsRes?.data ?? []
+  const locations = locationsRes?.data ?? []
 
   if (!po) notFound()
 
@@ -140,7 +142,7 @@ export default async function PODetailPage({
                     </form>
                   )}
                   {(po.status === "ordered" || po.status === "partially_received") && (
-                    <ReceivePODialog poId={po.id} items={items as any} />
+                    <ReceivePODialog poId={po.id} items={items as any} locations={locations} />
                   )}
                   {(po.status === "partially_received" || po.status === "received") && (
                     <CreateBillButton poId={po.id} />

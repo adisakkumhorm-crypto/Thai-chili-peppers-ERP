@@ -283,7 +283,6 @@ export type Database = {
           role_name: string | null
           updated_at: string
           user_id: string | null
-          shift_id: string | null
         }
         Insert: {
           created_at?: string
@@ -293,7 +292,6 @@ export type Database = {
           role_name?: string | null
           updated_at?: string
           user_id?: string | null
-          shift_id?: string | null
         }
         Update: {
           created_at?: string
@@ -303,7 +301,6 @@ export type Database = {
           role_name?: string | null
           updated_at?: string
           user_id?: string | null
-          shift_id?: string | null
         }
         Relationships: [
           {
@@ -710,6 +707,7 @@ export type Database = {
           position: string | null
           qr_code: string | null
           role: Database["public"]["Enums"]["employee_role"]
+          shift_id: string | null
           user_id: string | null
         }
         Insert: {
@@ -731,8 +729,8 @@ export type Database = {
           position?: string | null
           qr_code?: string | null
           role?: Database["public"]["Enums"]["employee_role"]
-          user_id?: string | null
           shift_id?: string | null
+          user_id?: string | null
         }
         Update: {
           allowed_features?: Json | null
@@ -753,8 +751,8 @@ export type Database = {
           position?: string | null
           qr_code?: string | null
           role?: Database["public"]["Enums"]["employee_role"]
-          user_id?: string | null
           shift_id?: string | null
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -762,6 +760,13 @@ export type Database = {
             columns: ["org_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employees_shift_id_fkey"
+            columns: ["shift_id"]
+            isOneToOne: false
+            referencedRelation: "shifts"
             referencedColumns: ["id"]
           },
         ]
@@ -865,6 +870,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           id: string
+          idempotency_key: string | null
           location_id: string
           org_id: string
           product_id: string
@@ -877,6 +883,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
+          idempotency_key?: string | null
           location_id: string
           org_id: string
           product_id: string
@@ -889,6 +896,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
+          idempotency_key?: string | null
           location_id?: string
           org_id?: string
           product_id?: string
@@ -1531,6 +1539,88 @@ export type Database = {
           },
         ]
       }
+      pr_quotations: {
+        Row: {
+          attachment_url: string | null
+          created_at: string
+          id: string
+          lead_time: string | null
+          org_id: string
+          payment_term: string | null
+          pr_id: string
+          price: number | null
+          quantity: number | null
+          quotation_date: string | null
+          quotation_number: string | null
+          remark: string | null
+          status: Database["public"]["Enums"]["pr_quotation_status"]
+          supplier_id: string
+          unit: string | null
+          updated_at: string
+          valid_until: string | null
+        }
+        Insert: {
+          attachment_url?: string | null
+          created_at?: string
+          id?: string
+          lead_time?: string | null
+          org_id: string
+          payment_term?: string | null
+          pr_id: string
+          price?: number | null
+          quantity?: number | null
+          quotation_date?: string | null
+          quotation_number?: string | null
+          remark?: string | null
+          status?: Database["public"]["Enums"]["pr_quotation_status"]
+          supplier_id: string
+          unit?: string | null
+          updated_at?: string
+          valid_until?: string | null
+        }
+        Update: {
+          attachment_url?: string | null
+          created_at?: string
+          id?: string
+          lead_time?: string | null
+          org_id?: string
+          payment_term?: string | null
+          pr_id?: string
+          price?: number | null
+          quantity?: number | null
+          quotation_date?: string | null
+          quotation_number?: string | null
+          remark?: string | null
+          status?: Database["public"]["Enums"]["pr_quotation_status"]
+          supplier_id?: string
+          unit?: string | null
+          updated_at?: string
+          valid_until?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pr_quotations_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pr_quotations_pr_id_fkey"
+            columns: ["pr_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pr_quotations_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           barcode: string | null
@@ -1839,6 +1929,7 @@ export type Database = {
           notes: string | null
           org_id: string
           po_number: string
+          pr_id: string | null
           requested_by: string | null
           status: Database["public"]["Enums"]["po_status"]
           supplier_id: string
@@ -1854,6 +1945,7 @@ export type Database = {
           notes?: string | null
           org_id: string
           po_number: string
+          pr_id?: string | null
           requested_by?: string | null
           status?: Database["public"]["Enums"]["po_status"]
           supplier_id: string
@@ -1869,6 +1961,7 @@ export type Database = {
           notes?: string | null
           org_id?: string
           po_number?: string
+          pr_id?: string | null
           requested_by?: string | null
           status?: Database["public"]["Enums"]["po_status"]
           supplier_id?: string
@@ -1884,10 +1977,206 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "purchase_orders_pr_id_fkey"
+            columns: ["pr_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_requests"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "purchase_orders_supplier_id_fkey"
             columns: ["supplier_id"]
             isOneToOne: false
             referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      purchase_request_items: {
+        Row: {
+          allocated_at_request: number | null
+          available_at_request: number | null
+          created_at: string
+          id: string
+          on_hand_at_request: number | null
+          org_id: string
+          pr_id: string
+          product_id: string
+          purchase_shortage: number | null
+          quantity: number
+          specification: string | null
+          suggested_stock_usage: number | null
+          unit: string | null
+        }
+        Insert: {
+          allocated_at_request?: number | null
+          available_at_request?: number | null
+          created_at?: string
+          id?: string
+          on_hand_at_request?: number | null
+          org_id: string
+          pr_id: string
+          product_id: string
+          purchase_shortage?: number | null
+          quantity: number
+          specification?: string | null
+          suggested_stock_usage?: number | null
+          unit?: string | null
+        }
+        Update: {
+          allocated_at_request?: number | null
+          available_at_request?: number | null
+          created_at?: string
+          id?: string
+          on_hand_at_request?: number | null
+          org_id?: string
+          pr_id?: string
+          product_id?: string
+          purchase_shortage?: number | null
+          quantity?: number
+          specification?: string | null
+          suggested_stock_usage?: number | null
+          unit?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_request_items_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_request_items_pr_id_fkey"
+            columns: ["pr_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_request_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      purchase_requests: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          attachment_url: string | null
+          created_at: string
+          estimated_budget: number | null
+          id: string
+          org_id: string
+          po_created_at: string | null
+          po_created_by: string | null
+          po_id: string | null
+          pr_number: string
+          project_id: string | null
+          reason: string | null
+          rejected_at: string | null
+          rejected_by: string | null
+          rejection_reason: string | null
+          requested_by: string
+          required_date: string | null
+          revision_reason: string | null
+          revision_requested_at: string | null
+          revision_requested_by: string | null
+          selected_at: string | null
+          selected_by: string | null
+          selected_quotation_id: string | null
+          selection_reason: string | null
+          status: Database["public"]["Enums"]["pr_status"]
+          updated_at: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          attachment_url?: string | null
+          created_at?: string
+          estimated_budget?: number | null
+          id?: string
+          org_id: string
+          po_created_at?: string | null
+          po_created_by?: string | null
+          po_id?: string | null
+          pr_number: string
+          project_id?: string | null
+          reason?: string | null
+          rejected_at?: string | null
+          rejected_by?: string | null
+          rejection_reason?: string | null
+          requested_by: string
+          required_date?: string | null
+          revision_reason?: string | null
+          revision_requested_at?: string | null
+          revision_requested_by?: string | null
+          selected_at?: string | null
+          selected_by?: string | null
+          selected_quotation_id?: string | null
+          selection_reason?: string | null
+          status?: Database["public"]["Enums"]["pr_status"]
+          updated_at?: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          attachment_url?: string | null
+          created_at?: string
+          estimated_budget?: number | null
+          id?: string
+          org_id?: string
+          po_created_at?: string | null
+          po_created_by?: string | null
+          po_id?: string | null
+          pr_number?: string
+          project_id?: string | null
+          reason?: string | null
+          rejected_at?: string | null
+          rejected_by?: string | null
+          rejection_reason?: string | null
+          requested_by?: string
+          required_date?: string | null
+          revision_reason?: string | null
+          revision_requested_at?: string | null
+          revision_requested_by?: string | null
+          selected_at?: string | null
+          selected_by?: string | null
+          selected_quotation_id?: string | null
+          selection_reason?: string | null
+          status?: Database["public"]["Enums"]["pr_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_requests_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_requests_po_id_fkey"
+            columns: ["po_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_requests_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_requests_selected_quotation_id_fkey"
+            columns: ["selected_quotation_id"]
+            isOneToOne: false
+            referencedRelation: "pr_quotations"
             referencedColumns: ["id"]
           },
         ]
@@ -1987,6 +2276,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          location_id: string | null
           order_id: string
           org_id: string
           product_id: string
@@ -1996,6 +2286,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          location_id?: string | null
           order_id: string
           org_id: string
           product_id: string
@@ -2005,6 +2296,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          location_id?: string | null
           order_id?: string
           org_id?: string
           product_id?: string
@@ -2012,6 +2304,13 @@ export type Database = {
           unit_price?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "sales_order_items_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_locations"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "sales_order_items_order_id_fkey"
             columns: ["order_id"]
@@ -2427,6 +2726,114 @@ export type Database = {
         }
         Returns: string
       }
+      generate_po_from_pr: {
+        Args: { p_pr_id: string; p_user_id: string }
+        Returns: string
+      }
+      rpc_cancel_sales_order_reservation: {
+        Args: { p_order_id: string; p_org_id: string; p_user_id: string }
+        Returns: Json
+      }
+      rpc_create_cost: {
+        Args: {
+          p_amount_satang: number
+          p_category: Database["public"]["Enums"]["cost_category"]
+          p_id: string
+          p_incurred_on?: string
+          p_notes?: string
+          p_org_id: string
+          p_po_id?: string
+          p_project_id?: string
+          p_subtotal_satang: number
+          p_supplier_id?: string
+          p_vat_amount_satang: number
+          p_vat_rate_id?: string
+          p_vendor?: string
+          p_wht_amount_satang: number
+          p_wht_rate_id?: string
+        }
+        Returns: string
+      }
+      rpc_create_invoice: {
+        Args: {
+          p_amount_satang: number
+          p_client_id: string
+          p_due_date?: string
+          p_id: string
+          p_is_recurring: boolean
+          p_issue_date?: string
+          p_notes?: string
+          p_number: string
+          p_org_id: string
+          p_project_id?: string
+          p_recurring_interval?: Database["public"]["Enums"]["recurring_interval"]
+          p_status: Database["public"]["Enums"]["invoice_status"]
+          p_subtotal_satang: number
+          p_vat_amount_satang: number
+          p_vat_rate_id?: string
+          p_wht_amount_satang: number
+          p_wht_rate_id?: string
+        }
+        Returns: string
+      }
+      rpc_delete_so_item: {
+        Args: { p_item_id: string; p_org_id: string }
+        Returns: undefined
+      }
+      rpc_issue_stock: {
+        Args: {
+          p_idempotency_key: string
+          p_location_id?: string
+          p_mode: string
+          p_org_id: string
+          p_product_id?: string
+          p_quantity: number
+          p_reference_no?: string
+          p_sales_order_item_id?: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
+      rpc_record_payment: {
+        Args: {
+          p_amount_satang: number
+          p_id: string
+          p_invoice_id: string
+          p_method: Database["public"]["Enums"]["payment_method"]
+          p_notes?: string
+          p_org_id: string
+          p_paid_at?: string
+        }
+        Returns: string
+      }
+      rpc_reserve_so_item: {
+        Args: {
+          p_location_id: string
+          p_order_id: string
+          p_org_id: string
+          p_product_id: string
+          p_quantity: number
+          p_unit_price: number
+        }
+        Returns: undefined
+      }
+      rpc_ship_sales_order: {
+        Args: {
+          p_idempotency_key?: string
+          p_order_id: string
+          p_org_id: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
+      rpc_test_default: {
+        Args: { p_opt?: string; p_req: string }
+        Returns: string
+      }
+      test_reorder: {
+        Args: { p_a: string; p_b?: string; p_c: string }
+        Returns: string
+      }
     }
     Enums: {
       account_type: "asset" | "liability" | "equity" | "revenue" | "expense"
@@ -2484,6 +2891,22 @@ export type Database = {
         | "received"
         | "cancelled"
         | "partially_received"
+      pr_quotation_status:
+        | "draft"
+        | "received"
+        | "selected"
+        | "rejected"
+        | "approved"
+      pr_status:
+        | "draft"
+        | "submitted"
+        | "in_procurement"
+        | "pending_approval"
+        | "approved"
+        | "po_created"
+        | "rejected"
+        | "revision_requested"
+        | "cancelled"
       project_status:
         | "not_started"
         | "in_progress"
@@ -2520,12 +2943,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -2549,11 +2972,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -2574,11 +2997,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -2599,11 +3022,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -2616,11 +3039,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -2695,6 +3118,24 @@ export const Constants = {
         "received",
         "cancelled",
         "partially_received",
+      ],
+      pr_quotation_status: [
+        "draft",
+        "received",
+        "selected",
+        "rejected",
+        "approved",
+      ],
+      pr_status: [
+        "draft",
+        "submitted",
+        "in_procurement",
+        "pending_approval",
+        "approved",
+        "po_created",
+        "rejected",
+        "revision_requested",
+        "cancelled",
       ],
       project_status: [
         "not_started",

@@ -19,6 +19,7 @@ const SalesOrderInput = z.object({
 const OrderItemInput = z.object({
   order_id: z.string().uuid(),
   product_id: z.string().uuid(),
+  location_id: z.string().uuid({ message: "Location is required" }),
   quantity: z.coerce.number().int().min(1),
   unit_price: z.coerce.number().min(0),
 })
@@ -83,44 +84,18 @@ export async function addOrderItem(input: z.infer<typeof OrderItemInput>): Promi
 
   const supabase = await createSupabaseClient()
   
-  const { data: order } = await supabase
-    .from("sales_orders")
-    .select("status")
-    .eq("id", parsed.data.order_id)
-    .eq("org_id", ctx.orgId)
-    .single()
-
-  if (order?.status !== "pending") {
-    return { error: "Cannot modify items unless order is pending" }
-  }
-
-  const { error } = await supabase.from("sales_order_items").insert({
-    org_id: ctx.orgId,
-    order_id: parsed.data.order_id,
-    product_id: parsed.data.product_id,
-    quantity: parsed.data.quantity,
-    unit_price: parsed.data.unit_price,
+  const { error } = await (supabase.rpc as any)('rpc_reserve_so_item', {
+    p_order_id: parsed.data.order_id,
+    p_product_id: parsed.data.product_id,
+    p_location_id: parsed.data.location_id,
+    p_quantity: parsed.data.quantity,
+    p_unit_price: parsed.data.unit_price,
+    p_org_id: ctx.orgId
   })
 
   if (error) return { error: error.message }
 
-  // Allocation: Reserve stock in Finished Goods (or general)
-  // For simplicity, we just find any location with stock or the first location and allocate it.
-  const { data: balances } = await supabase
-    .from("inventory_balances")
-    .select("id, allocated_quantity")
-    .eq("product_id", parsed.data.product_id)
-    .eq("org_id", ctx.orgId)
-    .limit(1)
-    .single()
-
-  if (balances) {
-    await supabase.from("inventory_balances").update({
-      allocated_quantity: balances.allocated_quantity + parsed.data.quantity
-    }).eq("id", balances.id)
-  }
-
-  await recalculateOrderTotal(parsed.data.order_id, ctx.orgId)
+  // Total is updated by RPC
   revalidatePath(`/sales/${parsed.data.order_id}`)
   return {}
 }
@@ -129,23 +104,14 @@ export async function deleteOrderItem(itemId: string, orderId: string, productId
   const ctx = await requireOrgContext()
   const supabase = await createSupabaseClient()
   
-  const { data: order } = await supabase.from("sales_orders").select("status").eq("id", orderId).eq("org_id", ctx.orgId).single()
-
-  if (order?.status !== "pending") return { error: "Cannot modify items" }
-
-  const { error } = await supabase.from("sales_order_items").delete().eq("id", itemId).eq("org_id", ctx.orgId)
+  const { error } = await (supabase.rpc as any)('rpc_delete_so_item', {
+    p_item_id: itemId,
+    p_org_id: ctx.orgId
+  })
 
   if (error) return { error: error.message }
 
-  // De-allocate
-  const { data: balances } = await supabase.from("inventory_balances").select("id, allocated_quantity").eq("product_id", productId).eq("org_id", ctx.orgId).limit(1).single()
-  if (balances && balances.allocated_quantity >= qty) {
-    await supabase.from("inventory_balances").update({
-      allocated_quantity: balances.allocated_quantity - qty
-    }).eq("id", balances.id)
-  }
-
-  await recalculateOrderTotal(orderId, ctx.orgId)
+  // Total is updated by RPC
   revalidatePath(`/sales/${orderId}`)
   return {}
 }
@@ -157,58 +123,70 @@ export async function updateOrderStatus(
 ): Promise<{ error?: string }> {
   const ctx = await requireOrgContext()
   const supabase = await createSupabaseClient()
+
+  // Fetch current status to enforce state machine
+  const { data: currentOrder, error: fetchErr } = await supabase
+    .from("sales_orders")
+    .select("status")
+    .eq("id", id)
+    .eq("org_id", ctx.orgId)
+    .single();
+
+  if (fetchErr || !currentOrder) {
+    return { error: "Order not found" };
+  }
+
+  const currentStatus = currentOrder.status;
+
+  // State Machine Guard
+  // Allowed transitions:
+  // pending -> paid, packing, shipped, cancelled
+  // paid -> packing, shipped, cancelled
+  // packing -> shipped, cancelled
+  // shipped -> delivered
+  // delivered -> (none)
+  // cancelled -> (none)
+
+  if (currentStatus === "delivered" || currentStatus === "cancelled") {
+    return { error: `Cannot change status from ${currentStatus}` };
+  }
+
+  if (currentStatus === "shipped" && status !== "delivered") {
+    return { error: `Cannot change status from shipped to ${status}` };
+  }
   
-  const updates: any = { status }
+  if (status === "pending" && currentStatus !== "pending") {
+    return { error: "Cannot revert status back to pending" };
+  }
+
+  const updates: any = {}
   if (trackingInfo) {
     updates.tracking_number = trackingInfo.tracking_number
     updates.courier = trackingInfo.courier
   }
 
-  // If status is shipped/delivered, we need to cut actual stock and remove allocation
   if (status === "shipped") {
-    const { data: items } = await supabase.from("sales_order_items").select("product_id, quantity").eq("order_id", id).eq("org_id", ctx.orgId)
-    if (items) {
-      for (const item of items) {
-        const { data: balances } = await supabase.from("inventory_balances").select("id, on_hand_quantity, allocated_quantity").eq("product_id", item.product_id).eq("org_id", ctx.orgId).limit(1).single()
-        if (balances) {
-          // Reduce on-hand AND allocated
-          await supabase.from("inventory_balances").update({
-            on_hand_quantity: Math.max(0, balances.on_hand_quantity - item.quantity),
-            allocated_quantity: Math.max(0, balances.allocated_quantity - item.quantity)
-          }).eq("id", balances.id)
-        }
-        
-        // Also reduce global product stock
-        const { data: p } = await supabase.from("products").select("stock_quantity").eq("id", item.product_id).eq("org_id", ctx.orgId).single()
-        if (p) {
-          await supabase.from("products").update({
-            stock_quantity: Math.max(0, p.stock_quantity - item.quantity)
-          }).eq("id", item.product_id)
-        }
-      }
-    }
+    const { error: rpcError } = await (supabase as any).rpc('rpc_ship_sales_order', {
+      p_order_id: id,
+      p_user_id: ctx.userId,
+      p_org_id: ctx.orgId
+    })
+    if (rpcError) return { error: `Failed to ship order: ${rpcError.message || rpcError.details}` }
+  } else if (status === "cancelled") {
+    const { error: rpcError } = await (supabase as any).rpc('rpc_cancel_sales_order_reservation', {
+      p_order_id: id,
+      p_user_id: ctx.userId,
+      p_org_id: ctx.orgId
+    })
+    if (rpcError) return { error: `Failed to cancel order: ${rpcError.message || rpcError.details}` }
+  } else {
+    updates.status = status
   }
 
-  // If cancelled, return allocation
-  if (status === "cancelled") {
-    const { data: currentOrder } = await supabase.from("sales_orders").select("status").eq("id", id).single()
-    if (currentOrder?.status !== "shipped" && currentOrder?.status !== "delivered") {
-      const { data: items } = await supabase.from("sales_order_items").select("product_id, quantity").eq("order_id", id).eq("org_id", ctx.orgId)
-      if (items) {
-        for (const item of items) {
-          const { data: balances } = await supabase.from("inventory_balances").select("id, allocated_quantity").eq("product_id", item.product_id).eq("org_id", ctx.orgId).limit(1).single()
-          if (balances) {
-            await supabase.from("inventory_balances").update({
-              allocated_quantity: Math.max(0, balances.allocated_quantity - item.quantity)
-            }).eq("id", balances.id)
-          }
-        }
-      }
-    }
+  if (Object.keys(updates).length > 0) {
+    const { error } = await supabase.from("sales_orders").update(updates).eq("id", id).eq("org_id", ctx.orgId)
+    if (error) return { error: error.message }
   }
-
-  const { error } = await supabase.from("sales_orders").update(updates).eq("id", id).eq("org_id", ctx.orgId)
-  if (error) return { error: error.message }
 
   revalidatePath("/sales")
   revalidatePath(`/sales/${id}`)

@@ -23,9 +23,11 @@ export function TransactionDialog({
 }) {
   const [open, setOpen] = useState(false)
   const [qty, setQty] = useState(1)
+  const [unitCost, setUnitCost] = useState(0)
   const [qr, setQr] = useState("")
   const [ref, setRef] = useState("")
   const [loading, setLoading] = useState(false)
+  const [idemKey, setIdemKey] = useState("")
 
   const isReceive = type === "receive"
   const title = isReceive ? "รับสินค้าเข้าคลัง (Receive)" : "เบิกสินค้าออก (Issue)"
@@ -39,8 +41,10 @@ export function TransactionDialog({
       location_id: locationId,
       transaction_type: type,
       quantity: isReceive ? qty : -qty,
+      unit_cost: isReceive ? unitCost : undefined,
       reference_no: ref || null,
       batch_qr_code: qr || null,
+      idempotency_key: idemKey,
     })
     setLoading(false)
     if (res?.error) {
@@ -57,7 +61,10 @@ export function TransactionDialog({
         variant={isReceive ? "outline" : "default"} 
         size="sm" 
         className="h-8 text-xs"
-        onClick={() => setOpen(true)}
+        onClick={() => {
+          setOpen(true)
+          setIdemKey(crypto.randomUUID())
+        }}
       >
         <Icon className="size-3 mr-1" /> {isReceive ? "รับ" : "จ่าย"}
       </Button>
@@ -89,11 +96,17 @@ export function TransactionDialog({
               <p className="text-[10px] text-muted-foreground">จำลอง: ลองพิมพ์อักษรจำลองเช่น "LOT-001" หรือยิงบาร์โค้ดจริง</p>
             </div>
             
-            <div className="grid grid-cols-2 gap-4">
+            <div className={`grid gap-4 ${isReceive ? 'grid-cols-3' : 'grid-cols-2'}`}>
               <div className="space-y-2">
                 <Label>จำนวน (Quantity)</Label>
                 <Input type="number" min="1" value={qty} onChange={e => setQty(parseInt(e.target.value) || 1)} required />
               </div>
+              {isReceive && (
+                <div className="space-y-2">
+                  <Label>ต้นทุนต่อหน่วย</Label>
+                  <Input type="number" min="0" step="0.01" value={unitCost} onChange={e => setUnitCost(parseFloat(e.target.value) || 0)} required />
+                </div>
+              )}
               <div className="space-y-2">
                 <Label>{isReceive ? "อ้างอิง (เช่น PO No.)" : "อ้างอิงโปรเจกต์"}</Label>
                 {isReceive ? (

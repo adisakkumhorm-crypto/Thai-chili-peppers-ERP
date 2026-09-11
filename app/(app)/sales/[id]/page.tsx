@@ -18,15 +18,17 @@ export default async function SalesOrderDetailPage({ params }: { params: Promise
   const ctx = await requireOrgContext()
   const supabase = await createClient()
 
-  const [orderRes, itemsRes, productsRes] = await Promise.all([
+  const [orderRes, itemsRes, productsRes, locationsRes] = await Promise.all([
     supabase.from("sales_orders").select("*, sales_channels(name)").eq("id", id).eq("org_id", ctx.orgId).maybeSingle(),
     supabase.from("sales_order_items").select("*, products(name, barcode)").eq("order_id", id).order("created_at"),
     supabase.from("products").select("id, name, price, stock_quantity, barcode").order("name"),
+    supabase.from("inventory_locations").select("id, name").eq("org_id", ctx.orgId).order("name")
   ])
 
   const order = orderRes.data
   const items = itemsRes.data ?? []
   const products = productsRes.data ?? []
+  const locations = locationsRes?.data ?? []
 
   if (!order) notFound()
 
@@ -51,6 +53,7 @@ export default async function SalesOrderDetailPage({ params }: { params: Promise
                 orderId={order.id} 
                 items={items as any} 
                 products={products}
+                locations={locations}
                 isEditable={isEditable}
                 totalAmount={order.total_amount}
               />

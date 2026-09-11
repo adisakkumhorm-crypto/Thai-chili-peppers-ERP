@@ -59,34 +59,12 @@ export async function updatePOStatus(
   id: string,
   status: "draft" | "ordered" | "received" | "cancelled"
 ): Promise<{ error?: string }> {
+  if (status === "received") {
+    return { error: "PO status cannot be set to 'received' directly. Use receivePOItems instead." }
+  }
+
   const ctx = await requireOrgContext()
   const supabase = await createSupabaseClient()
-  
-  if (status === "received") {
-    const { data: items } = await supabase
-      .from("purchase_order_items")
-      .select("product_id, quantity")
-      .eq("po_id", id)
-      .eq("org_id", ctx.orgId)
-      
-    if (items) {
-      for (const item of items) {
-         const { data: p } = await supabase
-           .from("products")
-           .select("stock_quantity")
-           .eq("id", item.product_id)
-           .eq("org_id", ctx.orgId)
-           .single()
-         if (p) {
-           await supabase
-             .from("products")
-             .update({ stock_quantity: p.stock_quantity + item.quantity })
-             .eq("id", item.product_id)
-             .eq("org_id", ctx.orgId)
-         }
-      }
-    }
-  }
   
   const { error } = await supabase
     .from("purchase_orders")
@@ -217,82 +195,41 @@ export async function updatePO(
 
 export async function receivePOItems(
   poId: string,
+  locationId: string,
+  idempotencyKey: string,
   itemsToReceive: { id: string; product_id: string; quantityToReceive: number }[]
 ): Promise<{ error?: string }> {
-  const ctx = await requireOrgContext()
-  const supabase = await createSupabaseClient()
+  try {
+    const ctx = await requireOrgContext()
+    const supabase = await createSupabaseClient()
+    const { data: authUser } = await supabase.auth.getUser()
+    if (!authUser.user) throw new Error("Unauthorized")
 
-  // 1. Process each item: update received_quantity and product stock
-  for (const item of itemsToReceive) {
-    if (item.quantityToReceive <= 0) continue
-
-    // Get current item to safely increment received_quantity
-    const { data: currentItem } = await supabase
-      .from("purchase_order_items")
-      .select("received_quantity")
-      .eq("id", item.id)
-      .eq("org_id", ctx.orgId)
-      .single()
-
-    if (currentItem) {
-      await supabase
-        .from("purchase_order_items")
-        .update({ 
-          received_quantity: (currentItem.received_quantity || 0) + item.quantityToReceive 
-        })
-        .eq("id", item.id)
-        .eq("org_id", ctx.orgId)
+    if (!locationId) throw new Error("Location ID is required")
+    if (!itemsToReceive || itemsToReceive.length === 0) {
+      throw new Error("No items to receive")
     }
 
-    // Update product stock
-    const { data: p } = await supabase
-      .from("products")
-      .select("stock_quantity")
-      .eq("id", item.product_id)
-      .eq("org_id", ctx.orgId)
-      .single()
+    // Call the RPC for atomic transaction
+    const { error: rpcError } = await (supabase.rpc as any)('rpc_receive_po_items', {
+      p_po_id: poId,
+      p_location_id: locationId,
+      p_org_id: ctx.orgId,
+      p_user_id: authUser.user.id,
+      p_items: itemsToReceive,
+      p_idempotency_key: idempotencyKey
+    })
 
-    if (p) {
-      await supabase
-        .from("products")
-        .update({ stock_quantity: p.stock_quantity + item.quantityToReceive })
-        .eq("id", item.product_id)
-        .eq("org_id", ctx.orgId)
+    if (rpcError) {
+      throw new Error(rpcError.message)
     }
+
+    revalidatePath("/purchases")
+    revalidatePath(`/purchases/${poId}`)
+    return {}
+  } catch (err: any) {
+    return { error: err.message }
   }
-
-  // 2. Check if PO is fully received
-  const { data: allItems } = await supabase
-    .from("purchase_order_items")
-    .select("quantity, received_quantity")
-    .eq("po_id", poId)
-    .eq("org_id", ctx.orgId)
-
-  let fullyReceived = true
-  if (allItems && allItems.length > 0) {
-    for (const item of allItems) {
-      if ((item.received_quantity || 0) < item.quantity) {
-        fullyReceived = false
-        break
-      }
-    }
-  } else {
-    fullyReceived = false
-  }
-
-  // 3. Update PO status
-  const newStatus = fullyReceived ? "received" : "partially_received"
-  const { error } = await supabase
-    .from("purchase_orders")
-    .update({ status: newStatus })
-    .eq("id", poId)
-    .eq("org_id", ctx.orgId)
-
-  if (error) return { error: error.message }
-
-  revalidatePath("/purchases")
-  revalidatePath(`/purchases/${poId}`)
-  return {}
 }
 
 export async function createCostFromPO(poId: string): Promise<{ costId?: string; error?: string }> {

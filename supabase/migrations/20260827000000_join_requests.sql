@@ -1,5 +1,5 @@
 -- Step 1: Create join_requests table
-CREATE TABLE join_requests (
+CREATE TABLE IF NOT EXISTS join_requests (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
@@ -10,6 +10,7 @@ CREATE TABLE join_requests (
 );
 
 -- Trigger for updated_at
+DROP TRIGGER IF EXISTS set_updated_at ON join_requests;
 CREATE TRIGGER set_updated_at BEFORE UPDATE ON join_requests FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
 -- Enable RLS
@@ -17,16 +18,19 @@ ALTER TABLE join_requests ENABLE ROW LEVEL SECURITY;
 ALTER TABLE join_requests FORCE ROW LEVEL SECURITY;
 
 -- 1. Users can see their own requests
+DROP POLICY IF EXISTS join_requests_select_own ON join_requests;
 CREATE POLICY join_requests_select_own ON join_requests
   FOR SELECT TO authenticated
   USING (user_id = (SELECT auth.uid()));
 
 -- 2. Users can create their own requests
+DROP POLICY IF EXISTS join_requests_insert_own ON join_requests;
 CREATE POLICY join_requests_insert_own ON join_requests
   FOR INSERT TO authenticated
   WITH CHECK (user_id = (SELECT auth.uid()));
 
 -- 3. Admins can see all requests for their org
+DROP POLICY IF EXISTS join_requests_select_admin ON join_requests;
 CREATE POLICY join_requests_select_admin ON join_requests
   FOR SELECT TO authenticated
   USING (
@@ -39,6 +43,7 @@ CREATE POLICY join_requests_select_admin ON join_requests
   );
 
 -- 4. Admins can update requests for their org
+DROP POLICY IF EXISTS join_requests_update_admin ON join_requests;
 CREATE POLICY join_requests_update_admin ON join_requests
   FOR UPDATE TO authenticated
   USING (

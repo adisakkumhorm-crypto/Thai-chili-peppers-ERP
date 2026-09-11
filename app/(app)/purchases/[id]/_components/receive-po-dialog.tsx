@@ -17,6 +17,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { receivePOItems } from "../../actions"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 type POItem = {
   id: string
@@ -29,13 +30,17 @@ type POItem = {
 export function ReceivePODialog({
   poId,
   items,
+  locations,
 }: {
   poId: string
   items: POItem[]
+  locations: { id: string; name: string }[]
 }) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [locationId, setLocationId] = useState<string>("")
+  const [idempotencyKey] = useState(() => typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2, 15))
   
   // Track how many we are receiving right now
   const [receiveAmounts, setReceiveAmounts] = useState<Record<string, number>>(
@@ -63,13 +68,19 @@ export function ReceivePODialog({
         quantityToReceive: receiveAmounts[item.id] || 0
       })).filter(item => item.quantityToReceive > 0)
 
+      if (!locationId) {
+        toast.error("กรุณาเลือกคลังสินค้าปลายทาง")
+        setIsSubmitting(false)
+        return
+      }
+
       if (itemsToReceive.length === 0) {
         toast.error("กรุณาระบุจำนวนสินค้าที่ต้องการรับ")
         setIsSubmitting(false)
         return
       }
 
-      const res = await receivePOItems(poId, itemsToReceive)
+      const res = await receivePOItems(poId, locationId, idempotencyKey, itemsToReceive)
       
       if (res?.error) {
         toast.error(res.error)
@@ -103,6 +114,20 @@ export function ReceivePODialog({
         </DialogHeader>
         
         <div className="py-4 space-y-4">
+          <div className="space-y-2">
+            <label className="text-sm font-medium">คลังสินค้าปลายทาง (Location)</label>
+            <Select value={locationId} onValueChange={(val) => setLocationId(val || "")}>
+              <SelectTrigger>
+                <SelectValue placeholder="เลือกคลังสินค้า..." />
+              </SelectTrigger>
+              <SelectContent>
+                {locations.map((loc) => (
+                  <SelectItem key={loc.id} value={loc.id}>{loc.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="border-t pt-4 space-y-4">
           {items.map(item => {
             const pending = Math.max(0, item.quantity - (item.received_quantity || 0))
             if (pending === 0) return null
@@ -128,6 +153,7 @@ export function ReceivePODialog({
               </div>
             )
           })}
+        </div>
         </div>
 
         <DialogFooter>
