@@ -102,63 +102,38 @@ export async function processInventoryTransaction(
     return {}
   }
 
-  // Fallback for adjust (will be handled in next step, leaving as is for now)
-  // 1. Record Transaction
-  const { error: txError } = await supabase.from("inventory_transactions").insert({
-    org_id: ctx.orgId,
-    product_id,
-    location_id,
-    transaction_type: transaction_type as Enums<"inventory_transaction_type">,
-    quantity,
-    reference_no,
-    batch_qr_code,
-    created_by: ctx.userId,
-  })
+  if (transaction_type === "adjust") {
+    // Validate and process adjust
+    if (quantity === 0) {
+      return { error: "Quantity cannot be zero for adjustment" }
+    }
+    
+    const key = idempotency_key || crypto.randomUUID();
+    
+    // For positive adjustment, unit_cost is required and must be non-negative
+    if (quantity > 0) {
+      if (unit_cost === undefined || unit_cost === null || unit_cost < 0) {
+        return { error: "Unit cost is required and cannot be negative for positive adjustment" }
+      }
+    }
+    
+    const { error: rpcError } = await (supabase as any).rpc('rpc_adjust_stock', {
+      p_org_id: ctx.orgId,
+      p_product_id: product_id,
+      p_location_id: location_id,
+      p_quantity: quantity,
+      p_unit_cost: unit_cost,
+      p_reference_no: reference_no || null,
+      p_reason: batch_qr_code || null,
+      p_idempotency_key: key,
+      p_user_id: ctx.userId
+    });
 
-  if (txError) return { error: txError.message }
-
-  // 2. Update Balance
-  const { data: balance } = await supabase
-    .from("inventory_balances")
-    .select("on_hand_quantity")
-    .eq("product_id", product_id)
-    .eq("location_id", location_id)
-    .eq("org_id", ctx.orgId)
-    .maybeSingle()
-
-  if (balance) {
-    await supabase
-      .from("inventory_balances")
-      .update({ on_hand_quantity: balance.on_hand_quantity + quantity })
-      .eq("product_id", product_id)
-      .eq("location_id", location_id)
-      .eq("org_id", ctx.orgId)
-  } else {
-    await supabase.from("inventory_balances").insert({
-      org_id: ctx.orgId,
-      product_id,
-      location_id,
-      on_hand_quantity: quantity,
-      allocated_quantity: 0,
-    })
+    if (rpcError) {
+      return { error: rpcError.message || rpcError.details || "Unknown error" }
+    }
+    
+    revalidatePath("/inventory")
+    return {}
   }
-
-  // 3. Update Global Product Stock
-  const { data: product } = await supabase
-    .from("products")
-    .select("stock_quantity")
-    .eq("id", product_id)
-    .eq("org_id", ctx.orgId)
-    .single()
-
-  if (product) {
-    await supabase
-      .from("products")
-      .update({ stock_quantity: product.stock_quantity + quantity })
-      .eq("id", product_id)
-      .eq("org_id", ctx.orgId)
-  }
-
-  revalidatePath("/inventory")
-  return {}
 }
