@@ -1,10 +1,10 @@
 // PM2 process config for Thai Chili Peppers ERP (Next.js).
-// Mirrors the live process: `pm2 start npm --name "skool-erp" -- start`
+// Mirrors the live process: `pm2 start npm --name "thai-chili-peppers-erp" -- start`
 module.exports = {
   apps: [
     {
-      name: 'skool-erp',
-      cwd: '/root/.openclaw/workspace-khaohom/skool-erp',
+      name: 'thai-chili-peppers-erp',
+      cwd: '/root/.openclaw/workspace-khaohom/thai-chili-peppers-erp',
       script: 'npm',
       args: 'start', // -> "next start -p 3001" (see package.json scripts.start)
       exec_mode: 'fork',

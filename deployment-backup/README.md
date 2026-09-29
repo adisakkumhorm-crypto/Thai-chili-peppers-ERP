@@ -10,7 +10,7 @@ Internet / Cloudflare Tunnel (cloudflared)
    └─► Traefik (root-traefik-1, ports 80/443)
          ├─ Host: erp.estimateoohub.cloud (non-`/api` paths)
          │     └─► erp-proxy (socat :3001) ──► host Next.js on 127.0.0.1:3001
-         │            (Next.js is managed by PM2 as `skool-erp`)
+         │            (Next.js is managed by PM2 as `thai-chili-peppers-erp`)
          └─ Host: erp.estimateoohub.cloud + PathPrefix(/auth/v1, /rest/v1,
                /storage/v1, /realtime/v1, /graphql/v1)
                └─► erp-supabase-proxy (socat :54321) ──► host Supabase Kong :54321
