@@ -40,5 +40,17 @@ export function validatePassword(pw: string): PasswordCheck {
     issues.push(`รหัสผ่านต้องมีความยาวอย่างน้อย ${PASSWORD_MIN_LENGTH} ตัวอักษร`)
   }
 
+  if (!/[a-z]/.test(pw)) {
+    issues.push("รหัสผ่านต้องมีตัวอักษรพิมพ์เล็กอย่างน้อย 1 ตัว (lowercase)")
+  }
+
+  if (!/[A-Z]/.test(pw)) {
+    issues.push("รหัสผ่านต้องมีตัวอักษรพิมพ์ใหญ่อย่างน้อย 1 ตัว (uppercase)")
+  }
+
+  if (!/[0-9]/.test(pw)) {
+    issues.push("รหัสผ่านต้องมีตัวเลขอย่างน้อย 1 ตัว (digit)")
+  }
+
   return { ok: issues.length === 0, issues }
 }

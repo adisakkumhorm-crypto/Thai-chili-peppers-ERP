@@ -136,4 +136,6 @@ export async function processInventoryTransaction(
     revalidatePath("/inventory")
     return {}
   }
+
+  return { error: "Unsupported transaction type" }
 }
