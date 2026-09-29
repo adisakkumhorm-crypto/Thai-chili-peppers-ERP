@@ -128,50 +128,23 @@ export async function removeMember(input: { userId: string, orgId: string }) {
     return { error: "แอดมินไม่สามารถลบบัญชีเจ้าของระบบได้" }
   }
 
-  // Delete employee record
-  const { data: emp } = await adminClient
-    .from("employees")
-    .select("id")
-    .eq("user_id", input.userId)
-    .eq("org_id", ctx.orgId)
-    .single()
-    
-  if (emp) {
-    await adminClient.from("employees").delete().eq("id", emp.id)
-  }
-
-  // Delete membership
+  // Remove access from this organization only.
+  // Employee lifecycle and the global Auth account are managed separately.
+  // This prevents Team access removal from deleting HR/business history.
   const { error: memError } = await adminClient
     .from("memberships")
     .delete()
     .eq("user_id", input.userId)
     .eq("org_id", ctx.orgId)
-    
+
   if (memError) return { error: memError.message }
 
-  // Cleanup join request
+  // A future join must start with a fresh request.
   await adminClient
     .from("join_requests" as any)
     .delete()
     .eq("user_id", input.userId)
     .eq("org_id", ctx.orgId)
-
-  // Delete the global Auth account only if this user has no memberships left.
-  // This prevents removing a user from one organization from deleting access
-  // to another organization.
-  const { count: remainingMemberships } = await adminClient
-    .from("memberships")
-    .select("*", { count: "exact", head: true })
-    .eq("user_id", input.userId)
-
-  if ((remainingMemberships ?? 0) === 0) {
-    const { error: deleteUserError } =
-      await adminClient.auth.admin.deleteUser(input.userId)
-
-    if (deleteUserError) {
-      return { error: deleteUserError.message }
-    }
-  }
 
   revalidatePath("/team")
   return { success: true }
