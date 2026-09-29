@@ -1,4 +1,4 @@
-# Thai Chili Pepper ERP — Engineering Patterns & Guardrails
+# Thai Chili Peppers ERP — Engineering Patterns & Guardrails
 
 เอกสารนี้รวบรวม Engineering Patterns และ Guardrails ที่ได้รับการยืนยันจากการนำไปใช้งานจริง (Implementation & Regression) ในโปรเจกต์ โดยเฉพาะจาก Phase 7 (Inventory Engine) เพื่อให้ Coding Worker และ Review Worker ใช้เป็นบรรทัดฐานในการทำงาน
 

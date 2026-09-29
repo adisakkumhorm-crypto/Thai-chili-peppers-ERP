@@ -1,7 +1,7 @@
-# Open-Core & License Strategy — Thai Chili Peppers Company OS
+# Open-Core & License Strategy — Thai Chili Peppers ERP
 
 > **Status:** Draft recommendation for review. The founder makes the final call.
-> **Context:** Internal-first AI-native Company OS / lightweight ERP. Possible future open-core play: free **Community Edition** + paid **Pro Edition** (hosted SaaS, advanced AI agents, automation packs, multi-tenant admin, advanced permissions, client portal, FlowAccount/PEAK integration, white-label, support/SLA).
+> **Context:** Internal-first AI-native lightweight ERP. Possible future open-core play: free **Community Edition** + paid **Pro Edition** (hosted SaaS, advanced AI agents, automation packs, multi-tenant admin, advanced permissions, client portal, FlowAccount/PEAK integration, white-label, support/SLA).
 > **Goal of this doc:** compare license options, recommend one primary strategy, draw the Community/Pro line, and list open-core hygiene practices. Nothing here is legal advice — confirm with a Thai-qualified lawyer before publishing a license.
 
 ---
@@ -56,7 +56,7 @@
 | **White-label / custom branding** | — | ✅ |
 | **Support & SLA** | community / best-effort | ✅ priced SLA tiers |
 
-**Boundary principle:** Community = a genuinely useful single-org Company OS that a solo founder or small team can self-host and love. Pro = anything that is **(a)** operationally expensive for us to run (hosted multi-tenant, SLA), **(b)** high-leverage automation (advanced agents, automation packs), or **(c)** sold to businesses serving *other* businesses (white-label, client portal, accounting integrations). Don't cripple the core to sell Pro — protect the *hosting and the advanced automation*, not the basics.
+**Boundary principle:** Community = a genuinely useful single-org ERP that a solo founder or small team can self-host and love. Pro = anything that is **(a)** operationally expensive for us to run (hosted multi-tenant, SLA), **(b)** high-leverage automation (advanced agents, automation packs), or **(c)** sold to businesses serving *other* businesses (white-label, client portal, accounting integrations). Don't cripple the core to sell Pro — protect the *hosting and the advanced automation*, not the basics.
 
 ---
 

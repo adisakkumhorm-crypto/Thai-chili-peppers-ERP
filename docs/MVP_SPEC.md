@@ -1,13 +1,13 @@
-# MVP Spec — Thai Chili Peppers Company OS
+# MVP Spec — Thai Chili Peppers ERP
 
-> AI-native **Company OS** for CRM, project delivery, finance visibility,
+> AI-native **ERP** for CRM, project delivery, finance visibility,
 > automation, and management dashboards. This is the **operational layer** — not
 > a legal accounting/tax system. Accounting integrates with FlowAccount / PEAK /
 > Xero later.
 
 ## Product goal
 
-Give a founder-led AI studio (founder + 2 junior devs) one place to see and run
+Give a Thai SME one place to see and run
 the business: clients and deals, project delivery, money in/out, a reusable
 automation-template library, and a dashboard showing cash, burn, revenue,
 pipeline, and runway. Useful internally first; structured so it can later ship as

@@ -1,4 +1,4 @@
-# Architecture — Thai Chili Peppers Company OS
+# Architecture — Thai Chili Peppers ERP
 
 Implementation-ready architecture for the V1 AI-native operational layer. Six modules (CRM, Projects, Finance, Templates, Automation, Dashboard), built in parallel by a 3-person team on Next.js App Router + Supabase, with a DB-independent pure-function core.
 

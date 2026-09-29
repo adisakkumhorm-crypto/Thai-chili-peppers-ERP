@@ -1,6 +1,6 @@
 # License — NOT YET FINALIZED
 
-The license for Thai Chili Peppers Company OS has **not been chosen yet**. Until the
+The license for Thai Chili Peppers ERP has **not been chosen yet**. Until the
 founder selects one, this software is **proprietary / all rights reserved** and is
 intended for **internal use only**. Do not redistribute.
 

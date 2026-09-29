@@ -16,9 +16,9 @@ const fontMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  title: "Thai Chili Peppers Company OS",
+  title: "Thai Chili Peppers ERP",
   description:
-    "AI-native Company OS — CRM, project delivery, finance visibility, automation, and management dashboards.",
+    "Thai Chili Peppers ERP — integrated CRM, HR, purchasing, inventory, finance, approvals, and business operations.",
 }
 
 export default function RootLayout({

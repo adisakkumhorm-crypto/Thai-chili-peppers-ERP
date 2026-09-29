@@ -22,7 +22,7 @@ export function AppSidebar({ email, role, employeeRole, orgName, allowedFeatures
           </div>
           <div className="grid leading-tight group-data-[collapsible=icon]:hidden pl-1">
             <span className="text-xl font-black text-white tracking-tight leading-none pb-1 drop-shadow-md" suppressHydrationWarning>{orgName}</span>
-            <span className="text-[11px] font-bold tracking-[0.2em] text-white/60 uppercase mt-0">Company OS</span>
+            <span className="text-[11px] font-bold tracking-[0.2em] text-white/60 uppercase mt-0">ERP</span>
           </div>
         </div>
       </SidebarHeader>

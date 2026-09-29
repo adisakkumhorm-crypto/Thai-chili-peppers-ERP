@@ -1,13 +1,17 @@
 #!/bin/bash
 set -e
 
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
+
+
 # Load Service Role Key
 export SUPABASE_SERVICE_ROLE_KEY=$(grep 'SUPABASE_SERVICE_ROLE_KEY' .env.local | cut -d '=' -f2 | tr -d '"' | tr -d "'")
 if [ -z "$SUPABASE_SERVICE_ROLE_KEY" ]; then
   export SUPABASE_SERVICE_ROLE_KEY=$(grep 'SUPABASE_SERVICE_ROLE_KEY' .env | cut -d '=' -f2 | tr -d '"' | tr -d "'")
 fi
 
-cat << 'EOF2' > skool-erp/test_step35_transfer.js
+cat << 'EOF2' > test_step35_transfer.js
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
 import path from 'path';
@@ -144,7 +148,6 @@ async function runTests() {
 runTests().catch(console.error);
 EOF2
 
-cd skool-erp
 node test_step35_transfer.js
 
 echo "--- RUNNING TYPECHECK ---"

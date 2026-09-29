@@ -1,6 +1,6 @@
 # n8n Integration
 
-The Company OS exposes inbound webhook endpoints that **n8n** (or Hermes, or any
+The ERP exposes inbound webhook endpoints that **n8n** (or Hermes, or any
 scheduler) can call to drive reminders and alerts. V1 ships validated
 **placeholders** — they authenticate and acknowledge; you wire the actual
 messaging (LINE, email) in n8n.

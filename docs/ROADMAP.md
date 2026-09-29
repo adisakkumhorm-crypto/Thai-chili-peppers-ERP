@@ -1,7 +1,7 @@
 # Roadmap
 
 From `docs/brainstorm/product-strategy.md`. Strategy: **dogfood an internal
-Company OS first**, keep the seams clean (`org_id` everywhere, clean module
+ERP first**, keep the seams clean (`org_id` everywhere, clean module
 boundaries) so it can become an open-core Community + Pro product without a
 rewrite.
 

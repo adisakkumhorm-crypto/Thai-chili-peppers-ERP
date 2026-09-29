@@ -1,18 +1,18 @@
-# Product Strategy — Thai Chili Peppers Company OS
+# Product Strategy — Thai Chili Peppers ERP
 
-Thai Chili Peppers AI (founder + 2 junior devs, lean runway) is building an AI-native **operational layer** for a Thai AI-education and workflow-automation studio: CRM, project delivery, finance visibility, automation, and management dashboards. It is explicitly **not an ERP** — accounting/tax stays in FlowAccount/PEAK/Xero. This doc fixes the MVP scope, ICPs, roadmap, and the open-core boundary. (Note: the repo is named `thai-chili-peppers-erp` for historical reasons; the product is a Company OS, not an ERP.)
+Thai Chili Peppers ERP is being developed as a modular, AI-ready ERP for Thai SMEs. The system brings together HR, CRM and sales, purchasing, inventory, finance and accounting, approval workflows, and automation in one platform. Accounting, tax, e-Tax, and external service integrations can be expanded as the product matures. This document defines the product direction, MVP scope, target users, roadmap, and future distribution strategy.
 
 ## 1. Three product directions
 
 | Direction | Pro | Con |
 |---|---|---|
-| **A. Internal Company OS** — we run our own studio on it first | Solves a problem we feel daily; demo data + dogfooding double as the sales pitch; zero external onboarding burden; ships within current 3-person capacity | No direct revenue yet; risk of building only for ourselves if module seams aren't kept generic |
+| **A. Internal ERP** — we run our own studio on it first | Solves a problem we feel daily; demo data + dogfooding double as the sales pitch; zero external onboarding burden; ships within current 3-person capacity | No direct revenue yet; risk of building only for ourselves if module seams aren't kept generic |
 | **B. SME SaaS** — multi-tenant hosted product from day one | Largest market (Thai SMEs, creators, education); recurring revenue | A 3-person team can't carry multi-tenant ops + sales + Thai-language onboarding + support now; premature for current runway |
 | **C. Open-core licensed product** — Community (self-host) + Pro (hosted) | Distribution via open source; community contributions; Pro upsell funds the team | Requires a hardened, documented, genuinely multi-tenant core — months of work before it pays off |
 
 ## 2. Recommendation
 
-**Pursue A (Internal Company OS) as the MVP, architected so it becomes C (open-core) later.** We dogfood the six modules running our own studio; the working instance is our proof and our demo. Crucially, we build it **multi-tenant-ready now** (`org_id` on every table, clean module boundaries, no hard-coded single-org assumptions) so the leap to open-core is a packaging exercise, not a rewrite. **B is the trap**: multi-tenant SaaS plus sales plus support exceeds what 3 people on lean runway can sustain today — we earn the right to it through C, not before. Decision: ship A, design for C, skip standalone B.
+**Pursue A (Internal ERP) as the MVP, architected so it becomes C (open-core) later.** We dogfood the six modules running our own studio; the working instance is our proof and our demo. Crucially, we build it **multi-tenant-ready now** (`org_id` on every table, clean module boundaries, no hard-coded single-org assumptions) so the leap to open-core is a packaging exercise, not a rewrite. **B is the trap**: multi-tenant SaaS plus sales plus support exceeds what 3 people on lean runway can sustain today — we earn the right to it through C, not before. Decision: ship A, design for C, skip standalone B.
 
 ## 3. ICPs / personas
 

@@ -17,7 +17,7 @@ if (!url || !anon) {
   process.exit(2)
 }
 
-const DEMO = { email: "demo@thai-chili-peppers.org", password: "BoomDemo123!" }
+const DEMO = { email: "demo-owner@example.com", password: "ThaiChiliDemo2026!" }
 let failures = 0
 const check = (name, ok, extra = "") => {
   console.log(`${ok ? "✓" : "✗"} ${name}${extra ? ` — ${extra}` : ""}`)

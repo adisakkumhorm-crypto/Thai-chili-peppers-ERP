@@ -1,8 +1,8 @@
 <div align="center">
 
-# 🐘 Thai Chili Peppers Company OS
+# 🐘 Thai Chili Peppers ERP
 
-### ระบบปฏิบัติการธุรกิจ (Company OS) สำหรับสตูดิโอสาย AI — CRM · ดีล · โปรเจกต์ · การเงิน · ระบบอัตโนมัติ · แดชบอร์ดผู้ก่อตั้ง
+### ERP สำหรับ SME ไทย — HR · CRM/Sales · PR/PO · Inventory · Finance/Accounting · Approvals · Automation
 
 *"ชั้นปฏิบัติการ" ของการทำธุรกิจ — ไม่ใช่ระบบบัญชี/ภาษี แต่เป็นที่เดียวที่มองเห็นและสั่งงานทั้งบริษัทได้จริง*
 
@@ -27,7 +27,7 @@
 <!-- แนะนำ: ใส่ภาพหน้าจอแดชบอร์ดตรงนี้ (เช่น docs/cover.png) เพื่อให้หน้า repo ดูสมบูรณ์ -->
 
 > [!NOTE]
-> Thai Chili Peppers Company OS คือ **"ระบบปฏิบัติการของบริษัท"** ไม่ใช่ระบบบัญชี/ใบกำกับภาษีตามกฎหมาย
+> Thai Chili Peppers ERP คือ **"ระบบปฏิบัติการของบริษัท"** ไม่ใช่ระบบบัญชี/ใบกำกับภาษีตามกฎหมาย
 > เรื่องบัญชียังคงอยู่กับ **FlowAccount / PEAK / Xero** (จะเชื่อมต่อในภายหลัง) — โปรดักต์นี้คือ *ชั้นปฏิบัติการ* ไม่ใช่ *สมุดบัญชีหลัก*
 
 ---
@@ -52,7 +52,7 @@
 
 ## 🎯 เกี่ยวกับโปรเจกต์ (About)
 
-Thai Chili Peppers Company OS เป็น **Company OS / ERP แบบเบา ที่ออกแบบมาแนว AI-native** สำหรับสตูดิโอสาย AI education + workflow automation ในไทย (ผู้ก่อตั้ง + ทีมเล็ก) ให้ทุกอย่างของธุรกิจอยู่ในที่เดียว: ลูกค้าและดีล, การส่งมอบโปรเจกต์, เงินเข้า–ออก, คลังเทมเพลตระบบอัตโนมัติที่นำกลับมาใช้ซ้ำได้ และแดชบอร์ดที่แสดง เงินสด / burn / รายได้ / pipeline / runway
+Thai Chili Peppers ERP เป็น **ERP แบบโมดูลาร์สำหรับ SME ไทย** ออกแบบให้รวมงานสำคัญของธุรกิจไว้ในระบบเดียว เช่น HR, CRM/Sales, PR/PO, Inventory, Finance/Accounting, Approval Workflow และ Automation พร้อมโครงสร้างที่สามารถต่อยอด AI และ Integration เพิ่มเติมได้
 
 ออกแบบให้ **ใช้ภายในบริษัทก่อน (dogfooding)** แต่วางรากฐานให้สะอาด (`org_id` ทุกตาราง, ขอบเขตโมดูลชัดเจน) เพื่อให้ต่อยอดเป็นสินค้า **open-core (Community + Pro)** ได้โดยไม่ต้องเขียนใหม่
 
@@ -143,9 +143,9 @@ pnpm dev                 # http://localhost:3000
 
 | อีเมล | รหัสผ่าน | บทบาท |
 |---|---|---|
-| `demo@thai-chili-peppers.org` | `BoomDemo123!` | owner |
-| `nattapong@thai-chili-peppers.org` | `BoomDemo123!` | member |
-| `praewa@thai-chili-peppers.org` | `BoomDemo123!` | member |
+| `demo-owner@example.com` | `ThaiChiliDemo2026!` | owner |
+| `demo-member1@example.com` | `ThaiChiliDemo2026!` | member |
+| `demo-member2@example.com` | `ThaiChiliDemo2026!` | member |
 
 > หน้า login มีปุ่ม **"Use demo account"** กดครั้งเดียวเข้าได้เลย
 
