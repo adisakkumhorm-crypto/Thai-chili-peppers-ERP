@@ -1,15 +1,51 @@
 "use client"
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { updateEmployee } from "../actions"
+import {
+  linkEmployeeAccount,
+  unlinkEmployeeAccount,
+  updateEmployee,
+} from "../actions"
 import { Checkbox } from "@/components/ui/checkbox"
 
-export function EditEmployeeClient({ employee, initialBalance, currentYear, shifts = [] }: { employee: any, initialBalance: any, currentYear: number, shifts?: any[] }) {
+type AccountOption = {
+  userId: string
+  email: string
+  role: "owner" | "admin" | "member"
+}
+
+type LinkedAccount = {
+  userId: string
+  email: string
+  role: "owner" | "admin" | "member" | null
+}
+
+export function EditEmployeeClient({
+  employee,
+  initialBalance,
+  currentYear,
+  shifts = [],
+  canManageAccounts = false,
+  accountOptions = [],
+  linkedAccount = null,
+}: {
+  employee: any
+  initialBalance: any
+  currentYear: number
+  shifts?: any[]
+  canManageAccounts?: boolean
+  accountOptions?: AccountOption[]
+  linkedAccount?: LinkedAccount | null
+}) {
+  const router = useRouter()
   const [loading, setLoading] = useState(false)
+  const [linkLoading, setLinkLoading] = useState(false)
+  const [selectedUserId, setSelectedUserId] = useState("")
   const [formData, setFormData] = useState({
     first_name: employee.first_name || "",
     last_name: employee.last_name || "",
@@ -47,6 +83,44 @@ export function EditEmployeeClient({ employee, initialBalance, currentYear, shif
     setLoading(false)
     if (res?.error) toast.error(res.error)
     else toast.success("บันทึกข้อมูลเรียบร้อยแล้ว")
+  }
+
+  async function handleLinkAccount() {
+    if (!selectedUserId) return
+
+    setLinkLoading(true)
+
+    const res = await linkEmployeeAccount(
+      employee.id,
+      selectedUserId
+    )
+
+    setLinkLoading(false)
+
+    if (res?.error) {
+      toast.error(res.error)
+      return
+    }
+
+    toast.success("ผูกบัญชีเข้าใช้งาน ERP เรียบร้อยแล้ว")
+    setSelectedUserId("")
+    router.refresh()
+  }
+
+  async function handleUnlinkAccount() {
+    setLinkLoading(true)
+
+    const res = await unlinkEmployeeAccount(employee.id)
+
+    setLinkLoading(false)
+
+    if (res?.error) {
+      toast.error(res.error)
+      return
+    }
+
+    toast.success("ยกเลิกการผูกบัญชีเรียบร้อยแล้ว")
+    router.refresh()
   }
 
   return (
@@ -110,7 +184,9 @@ export function EditEmployeeClient({ employee, initialBalance, currentYear, shif
                 >
                   <option value="staff">พนักงานทั่วไป (Staff)</option>
                   <option value="foreman">โฟร์แมน / หัวหน้างาน (Foreman)</option>
-                  <option value="admin">แอดมิน (Admin)</option>
+                  <option value="manager">ผู้จัดการ (Manager)</option>
+                  <option value="executive">ผู้บริหาร (Executive)</option>
+                  <option value="admin">แอดมินระบบฝ่ายงาน (Admin)</option>
                 </select>
               </div>
               <div className="space-y-1 col-span-2">
@@ -175,6 +251,94 @@ export function EditEmployeeClient({ employee, initialBalance, currentYear, shif
             </div>
           </CardContent>
         </Card>
+
+        {canManageAccounts && (
+          <Card className="md:col-span-2">
+            <CardHeader>
+              <CardTitle className="text-base">
+                บัญชีเข้าใช้งาน ERP
+              </CardTitle>
+              <CardDescription>
+                ผูก Employee Record นี้กับบัญชี Login
+                ที่เป็นสมาชิกขององค์กรเดียวกัน
+              </CardDescription>
+            </CardHeader>
+
+            <CardContent>
+              {linkedAccount ? (
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="font-medium">
+                      {linkedAccount.email}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Organization Access:{" "}
+                      {linkedAccount.role ?? "ไม่พบ Membership"}
+                    </p>
+                  </div>
+
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    disabled={linkLoading}
+                    onClick={handleUnlinkAccount}
+                  >
+                    {linkLoading
+                      ? "กำลังยกเลิก..."
+                      : "ยกเลิกการผูกบัญชี"}
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>
+                      เลือกบัญชีผู้ใช้
+                    </Label>
+
+                    <select
+                      className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
+                      value={selectedUserId}
+                      onChange={(event) =>
+                        setSelectedUserId(event.target.value)
+                      }
+                    >
+                      <option value="">
+                        -- เลือกบัญชี --
+                      </option>
+
+                      {accountOptions.map((account) => (
+                        <option
+                          key={account.userId}
+                          value={account.userId}
+                        >
+                          {account.email} ({account.role})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {accountOptions.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      ไม่มีบัญชีที่สามารถผูกได้
+                    </p>
+                  ) : (
+                    <Button
+                      type="button"
+                      disabled={
+                        linkLoading || !selectedUserId
+                      }
+                      onClick={handleLinkAccount}
+                    >
+                      {linkLoading
+                        ? "กำลังผูกบัญชี..."
+                        : "ผูกบัญชี"}
+                    </Button>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
       </div>
       <div className="flex justify-end">
         <Button type="submit" disabled={loading} className="w-full md:w-auto px-8">

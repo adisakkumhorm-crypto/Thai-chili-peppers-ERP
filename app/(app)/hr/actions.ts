@@ -17,7 +17,7 @@ const EmployeeInput = z.object({
   employment_type: z.enum(["monthly", "daily", "part_time"]).default("monthly"),
   qr_code: z.string().optional().nullable(),
   shift_id: z.string().optional().nullable(),
-  role: z.enum(["admin", "foreman", "staff"]).default("staff"),
+  role: z.enum(["admin", "executive", "manager", "foreman", "staff"]).default("staff"),
 })
 
 export async function createEmployee(input: z.infer<typeof EmployeeInput>): Promise<{ error?: string }> {

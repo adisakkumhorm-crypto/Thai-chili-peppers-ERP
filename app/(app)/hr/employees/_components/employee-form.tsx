@@ -23,7 +23,7 @@ const EmployeeInput = z.object({
   employment_type: z.enum(["monthly", "daily", "part_time"]).default("monthly"),
   qr_code: z.string().optional().nullable(),
   shift_id: z.string().optional().nullable(),
-  role: z.enum(["admin", "foreman", "staff"]).default("staff"),
+  role: z.enum(["admin", "executive", "manager", "foreman", "staff"]).default("staff"),
 })
 
 type EmployeeFormValues = z.infer<typeof EmployeeInput>
@@ -72,7 +72,9 @@ export function EmployeeForm({ shifts = [] }: { shifts?: any[] }) {
           >
             <option value="staff">พนักงานทั่วไป (Staff)</option>
             <option value="foreman">โฟร์แมน / หัวหน้างาน (Foreman)</option>
-            <option value="admin">ผู้จัดการ / แอดมิน (Admin)</option>
+            <option value="manager">ผู้จัดการ (Manager)</option>
+            <option value="executive">ผู้บริหาร (Executive)</option>
+            <option value="admin">แอดมินระบบฝ่ายงาน (Admin)</option>
           </select>
         </div>
         <div className="space-y-2">
