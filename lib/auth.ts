@@ -5,13 +5,20 @@ import type { Enums } from "@/lib/types/database"
 
 export type Role = Enums<"role_enum">
 
+export type EmployeeRole =
+  | "admin"
+  | "executive"
+  | "manager"
+  | "foreman"
+  | "staff"
+
 export type OrgContext = {
   userId: string
   email: string | null
   orgId: string
   orgName: string
   role: Role
-  employeeRole: "admin" | "foreman" | "staff" | null
+  employeeRole: EmployeeRole | null
   allowedFeatures: string[]
   timezone: string
 }
@@ -81,7 +88,7 @@ export function requireRole(ctx: OrgContext, allowed: Role[]): void {
   }
 }
 
-export function requireEmployeeRole(ctx: OrgContext, allowedRoles: ("admin" | "foreman" | "staff")[]): void {
+export function requireEmployeeRole(ctx: OrgContext, allowedRoles: EmployeeRole[]): void {
   // System owners and admins bypass HR role checks
   if (ctx.role === "owner" || ctx.role === "admin") return;
   

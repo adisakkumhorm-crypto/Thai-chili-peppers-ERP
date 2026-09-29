@@ -1,5 +1,4 @@
 import { Users, ShieldCheck } from "lucide-react"
-import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { requireOrgContext } from "@/lib/auth"
 import { PageHeader } from "@/components/page-header"
@@ -25,7 +24,6 @@ function initials(name: string | null, fallback: string): string {
 
 export default async function TeamPage() {
   const ctx = await requireOrgContext()
-  const supabase = await createClient()
   const adminClient = createAdminClient()
   const canEdit = ctx.role === "owner" || ctx.role === "admin"
 
@@ -47,12 +45,20 @@ export default async function TeamPage() {
   const { data: employees } = userIds.length
     ? await adminClient
         .from("employees")
-        .select("user_id, allowed_features")
+        .select("user_id, role, allowed_features")
         .eq("org_id", ctx.orgId)
         .in("user_id", userIds)
     : { data: [] }
     
-  const featuresByUserId = new Map(((employees as any[]) ?? []).map((e: any) => [e.user_id, e.allowed_features ?? []]))
+  const employeeByUserId = new Map(
+    ((employees as any[]) ?? []).map((e: any) => [
+      e.user_id,
+      {
+        role: e.role ?? null,
+        features: e.allowed_features ?? [],
+      },
+    ])
+  )
 
   // Fetch emails from auth.users
   const { data: authData } = await adminClient.auth.admin.listUsers()
@@ -60,14 +66,19 @@ export default async function TeamPage() {
 
   const nameById = new Map((profiles ?? []).map((p) => [p.id, p.full_name] as const))
 
-  const team = (members ?? []).map((m) => ({
-    userId: m.user_id,
-    role: m.role,
-    fullName: nameById.get(m.user_id) ?? null,
-    email: emailById.get(m.user_id) ?? null,
-    isSelf: m.user_id === ctx.userId,
-    features: featuresByUserId.get(m.user_id) ?? [],
-  }))
+  const team = (members ?? []).map((m) => {
+    const employee = employeeByUserId.get(m.user_id)
+
+    return {
+      userId: m.user_id,
+      membershipRole: m.role,
+      employeeRole: employee?.role ?? null,
+      fullName: nameById.get(m.user_id) ?? null,
+      email: emailById.get(m.user_id) ?? null,
+      isSelf: m.user_id === ctx.userId,
+      features: employee?.features ?? [],
+    }
+  })
 
   // Pending requests
   let requests: any[] = []
@@ -160,24 +171,44 @@ export default async function TeamPage() {
                   </div>
                   <div className="flex items-center">
                     <Badge variant="outline" className="shrink-0 capitalize px-2.5 py-0.5 border-white/10 bg-white/5 text-slate-300">
-                      {member.role}
+                      {member.isSelf && member.membershipRole === "owner"
+                        ? "Founder"
+                        : member.membershipRole}
                     </Badge>
-                    {canEdit && (
-                      <EditMemberButton 
-                        userId={member.userId} 
-                        orgId={ctx.orgId} 
-                        memberName={member.fullName ?? member.email ?? "ไม่ระบุชื่อ"} 
-                        currentRole={member.role}
-                        currentFeatures={member.features}
-                      />
+
+                    {member.employeeRole && (
+                      <Badge
+                        variant="secondary"
+                        className="ml-2 shrink-0 capitalize px-2.5 py-0.5"
+                      >
+                        {member.employeeRole}
+                      </Badge>
                     )}
-                    {canEdit && (
-                      <ResetPasswordButton
-                        userId={member.userId}
-                        memberName={member.fullName ?? member.email ?? "ไม่ระบุชื่อ"}
-                      />
-                    )}
-                    {!member.isSelf && canEdit && (
+                    {canEdit &&
+                      (ctx.role === "owner" ||
+                        member.membershipRole !== "owner") && (
+                        <EditMemberButton
+                          userId={member.userId}
+                          orgId={ctx.orgId}
+                          memberName={member.fullName ?? member.email ?? "ไม่ระบุชื่อ"}
+                          actorRole={ctx.role}
+                          currentMembershipRole={member.membershipRole}
+                          currentEmployeeRole={member.employeeRole}
+                          currentFeatures={member.features}
+                        />
+                      )}
+                    {canEdit &&
+                      (ctx.role === "owner" ||
+                        member.membershipRole !== "owner") && (
+                        <ResetPasswordButton
+                          userId={member.userId}
+                          memberName={member.fullName ?? member.email ?? "ไม่ระบุชื่อ"}
+                        />
+                      )}
+                    {!member.isSelf &&
+                      canEdit &&
+                      (ctx.role === "owner" ||
+                        member.membershipRole !== "owner") && (
                       <RemoveMemberButton 
                         userId={member.userId} 
                         orgId={ctx.orgId} 
