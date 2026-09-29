@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useRef, useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
@@ -30,6 +30,7 @@ type EmployeeFormValues = z.infer<typeof EmployeeInput>
 
 export function EmployeeForm({ shifts = [] }: { shifts?: any[] }) {
   const [loading, setLoading] = useState(false)
+  const submitLock = useRef(false)
   
   const form = useForm<EmployeeFormValues>({
     resolver: zodResolver(EmployeeInput) as any,
@@ -49,11 +50,20 @@ export function EmployeeForm({ shifts = [] }: { shifts?: any[] }) {
   })
 
   async function onSubmit(data: EmployeeFormValues) {
+    if (submitLock.current) return
+
+    submitLock.current = true
     setLoading(true)
-    const res = await createEmployee(data)
-    setLoading(false)
-    if (res?.error) {
-      toast.error(res.error)
+
+    try {
+      const res = await createEmployee(data)
+
+      if (res?.error) {
+        toast.error(res.error)
+      }
+    } finally {
+      submitLock.current = false
+      setLoading(false)
     }
   }
 

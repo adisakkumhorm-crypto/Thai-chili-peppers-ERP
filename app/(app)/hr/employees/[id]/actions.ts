@@ -39,7 +39,6 @@ export async function updateEmployee(id: string, data: any) {
       daily_wage: data.daily_wage,
       employment_type: data.employment_type,
       role: data.role,
-      is_active: data.is_active,
       shift_id: data.shift_id || null,
     })
     .eq("id", id)
@@ -202,6 +201,141 @@ export async function unlinkEmployeeAccount(employeeId: string) {
 
   revalidatePath("/hr/employees")
   revalidatePath(`/hr/employees/${employeeId}`)
+  revalidatePath("/team")
+
+  return { success: true }
+}
+
+export async function offboardEmployee(
+  employeeId: string
+) {
+  const ctx = await requireOrgContext()
+
+  try {
+    requireRole(ctx, ["owner", "admin"])
+  } catch {
+    return {
+      error:
+        "ไม่มีสิทธิ์ในการปิดใช้งานพนักงาน",
+    }
+  }
+
+  const supabase = await createClient()
+
+  const { error } = await (supabase as any).rpc(
+    "offboard_employee",
+    {
+      target_employee_id: employeeId,
+    }
+  )
+
+  if (error) {
+    const message = error.message || ""
+
+    if (
+      message.includes(
+        "Owner cannot be offboarded from HR"
+      )
+    ) {
+      return {
+        error:
+          "ไม่สามารถทำรายการลาออกให้บัญชี Owner ได้",
+      }
+    }
+
+    if (
+      message.includes(
+        "Not authorized to offboard employee"
+      )
+    ) {
+      return {
+        error:
+          "ไม่มีสิทธิ์ในการปิดใช้งานพนักงาน",
+      }
+    }
+
+    if (message.includes("Employee not found")) {
+      return {
+        error: "ไม่พบพนักงานในองค์กรนี้",
+      }
+    }
+
+    return { error: message }
+  }
+
+  revalidatePath("/hr")
+  revalidatePath("/hr/employees")
+  revalidatePath(`/hr/employees/${employeeId}`)
+  revalidatePath("/team")
+
+  return { success: true }
+}
+
+
+export async function deleteEmployeePermanently(
+  employeeId: string
+) {
+  const ctx = await requireOrgContext()
+
+  try {
+    requireRole(ctx, ["owner", "admin"])
+  } catch {
+    return {
+      error: "ไม่มีสิทธิ์ในการลบพนักงาน",
+    }
+  }
+
+  const supabase = await createClient()
+
+  const { error } = await (supabase as any).rpc(
+    "delete_employee_if_safe",
+    {
+      target_employee_id: employeeId,
+    }
+  )
+
+  if (error) {
+    const message = error.message || ""
+
+    if (
+      message.includes("EMPLOYEE_LINKED_USER")
+    ) {
+      return {
+        error:
+          "พนักงานคนนี้ยังผูกบัญชี Login อยู่ กรุณายกเลิกการผูกบัญชีก่อนลบถาวร",
+      }
+    }
+
+    if (
+      message.includes("EMPLOYEE_HAS_HISTORY")
+    ) {
+      return {
+        error:
+          "พนักงานคนนี้มีประวัติวันลา/เวลาเข้างานแล้ว จึงลบถาวรไม่ได้ กรุณาใช้ ลาออก / ปิดใช้งาน แทน",
+      }
+    }
+
+    if (
+      message.includes(
+        "Not authorized to delete employee"
+      )
+    ) {
+      return {
+        error: "ไม่มีสิทธิ์ในการลบพนักงาน",
+      }
+    }
+
+    if (message.includes("Employee not found")) {
+      return {
+        error: "ไม่พบพนักงานในองค์กรนี้",
+      }
+    }
+
+    return { error: message }
+  }
+
+  revalidatePath("/hr")
+  revalidatePath("/hr/employees")
   revalidatePath("/team")
 
   return { success: true }

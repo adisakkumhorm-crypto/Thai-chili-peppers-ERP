@@ -7,7 +7,9 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import {
+  deleteEmployeePermanently,
   linkEmployeeAccount,
+  offboardEmployee,
   unlinkEmployeeAccount,
   updateEmployee,
 } from "../actions"
@@ -45,6 +47,8 @@ export function EditEmployeeClient({
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [linkLoading, setLinkLoading] = useState(false)
+  const [offboardLoading, setOffboardLoading] = useState(false)
+  const [deleteLoading, setDeleteLoading] = useState(false)
   const [selectedUserId, setSelectedUserId] = useState("")
   const [formData, setFormData] = useState({
     first_name: employee.first_name || "",
@@ -123,6 +127,70 @@ export function EditEmployeeClient({
     router.refresh()
   }
 
+  async function handleOffboardEmployee() {
+    const confirmed = window.confirm(
+      "ยืนยันการลาออก / ปิดใช้งานพนักงานคนนี้?\n\n" +
+        "Employee Record และประวัติ HR จะยังถูกเก็บไว้\n" +
+        "แต่ถ้ามีบัญชี Login ระบบจะถอนสิทธิ์เข้าองค์กรนี้ด้วย"
+    )
+
+    if (!confirmed) return
+
+    setOffboardLoading(true)
+
+    try {
+      const res = await offboardEmployee(
+        employee.id
+      )
+
+      if (res?.error) {
+        toast.error(res.error)
+        return
+      }
+
+      toast.success(
+        "ปิดใช้งานพนักงานเรียบร้อยแล้ว"
+      )
+
+      router.refresh()
+    } finally {
+      setOffboardLoading(false)
+    }
+  }
+
+  async function handleDeleteEmployee() {
+    const confirmed = window.confirm(
+      "ลบ Employee Record นี้ถาวร?\n\n" +
+        "ใช้สำหรับรายการที่เพิ่มผิดเท่านั้น\n" +
+        "ระบบจะไม่อนุญาตให้ลบหากผูก Login หรือมีประวัติ HR"
+    )
+
+    if (!confirmed) return
+
+    setDeleteLoading(true)
+
+    try {
+      const res =
+        await deleteEmployeePermanently(
+          employee.id
+        )
+
+      if (res?.error) {
+        toast.error(res.error)
+        return
+      }
+
+      toast.success(
+        "ลบ Employee Record เรียบร้อยแล้ว"
+      )
+
+      router.push("/hr/employees")
+      router.refresh()
+    } finally {
+      setDeleteLoading(false)
+    }
+  }
+
   return (
     <form onSubmit={handleSave} className="space-y-6">
       <div className="grid gap-6 md:grid-cols-2">
@@ -146,9 +214,18 @@ export function EditEmployeeClient({
               </div>
               <div className="space-y-1">
                 <Label>สถานะ</Label>
-                <div className="flex items-center gap-2 h-9">
-                  <Checkbox checked={formData.is_active} onCheckedChange={c => setFormData({...formData, is_active: !!c})} />
-                  <span className="text-sm">Active (ทำงานอยู่)</span>
+                <div className="flex h-9 items-center">
+                  <span
+                    className={
+                      formData.is_active
+                        ? "text-sm font-medium text-emerald-600"
+                        : "text-sm font-medium text-muted-foreground"
+                    }
+                  >
+                    {formData.is_active
+                      ? "Active (ทำงานอยู่)"
+                      : "Inactive (ลาออก / ปิดใช้งาน)"}
+                  </span>
                 </div>
               </div>
               <div className="space-y-1">
@@ -336,6 +413,55 @@ export function EditEmployeeClient({
                   )}
                 </div>
               )}
+            </CardContent>
+          </Card>
+        )}
+        {canManageAccounts && (
+          <Card className="md:col-span-2 border-destructive/40">
+            <CardHeader>
+              <CardTitle className="text-base">
+                การสิ้นสุดการทำงาน / ลบข้อมูล
+              </CardTitle>
+              <CardDescription>
+                การลาออกจะเก็บประวัติ HR ไว้
+                ส่วนการลบถาวรใช้เฉพาะรายการที่สร้างผิดและไม่มีประวัติ
+              </CardDescription>
+            </CardHeader>
+
+            <CardContent className="flex flex-col gap-3 sm:flex-row">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={
+                  offboardLoading ||
+                  deleteLoading ||
+                  !formData.is_active
+                }
+                onClick={handleOffboardEmployee}
+              >
+                {offboardLoading
+                  ? "กำลังปิดใช้งาน..."
+                  : formData.is_active
+                    ? "ลาออก / ปิดใช้งาน"
+                    : "พนักงานปิดใช้งานแล้ว"}
+              </Button>
+
+              <Button
+                type="button"
+                variant="destructive"
+                disabled={
+                  deleteLoading ||
+                  offboardLoading ||
+                  Boolean(linkedAccount)
+                }
+                onClick={handleDeleteEmployee}
+              >
+                {deleteLoading
+                  ? "กำลังลบ..."
+                  : linkedAccount
+                    ? "ต้อง Unlink ก่อนลบถาวร"
+                    : "ลบ Employee Record ถาวร"}
+              </Button>
             </CardContent>
           </Card>
         )}
