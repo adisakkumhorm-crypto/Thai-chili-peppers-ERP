@@ -132,6 +132,38 @@ export default async function SettingsPage() {
         </Card>
       </div>
 
+      {ctx.role === "owner" && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Security</CardTitle>
+            <CardDescription>
+              Owner-only account and login security controls.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Link
+              href="/settings/security/users"
+              className="hover:bg-accent flex items-center gap-3 rounded-lg border p-3 transition-colors"
+            >
+              <div className="bg-muted flex size-9 shrink-0 items-center justify-center rounded-md">
+                <Lock className="size-4" />
+              </div>
+
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium">
+                  Login & Security
+                </p>
+                <p className="text-muted-foreground truncate text-xs">
+                  Review login accounts and permanent-delete safety blockers.
+                </p>
+              </div>
+
+              <ChevronRight className="text-muted-foreground size-4 shrink-0" />
+            </Link>
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Integrations</CardTitle>
