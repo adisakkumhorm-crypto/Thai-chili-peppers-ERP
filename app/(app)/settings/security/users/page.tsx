@@ -20,6 +20,8 @@ import {
   AlertTitle,
 } from "@/components/ui/alert"
 
+import { PermanentDeleteLoginButton } from "./_components/permanent-delete-login-button"
+
 export const dynamic = "force-dynamic"
 
 export default async function LoginSecurityUsersPage() {
@@ -189,6 +191,7 @@ export default async function LoginSecurityUsersPage() {
           authResult.data.user?.email ??
           emailFromTombstone ??
           "Unknown",
+        authExists: Boolean(authResult.data.user),
         removedAt: event.created_at,
         removedBy: event.actor_email ?? "Unknown",
         currentOrgMembership: membershipResult.count ?? 0,
@@ -217,9 +220,9 @@ export default async function LoginSecurityUsersPage() {
         <ShieldCheck className="size-4" />
         <AlertTitle>Owner only</AlertTitle>
         <AlertDescription>
-          หน้านี้แสดงเฉพาะบัญชีที่ยังเชื่อมโยงกับองค์กรปัจจุบัน
-          และยังไม่อนุญาตให้ลบบัญชี Login
-          บัญชีที่ไม่มีความสัมพันธ์กับองค์กรจะไม่ถูกแสดงเพื่อป้องกันการเข้าถึงข้ามองค์กร
+          หน้านี้เป็น Owner-only สำหรับตรวจสอบ Login Security
+          การลบ Login ถาวรอนุญาตเฉพาะบัญชีที่ผ่าน Removed Login Candidate
+          และต้องผ่านการตรวจสอบความสัมพันธ์ทั้งระบบก่อนลบ
         </AlertDescription>
       </Alert>
 
@@ -317,7 +320,8 @@ export default async function LoginSecurityUsersPage() {
           </CardTitle>
           <CardDescription>
             ประวัติ Login ที่เคยถูกนำออกจากองค์กรนี้
-            ส่วนนี้เป็นข้อมูลแบบ Read-only และยังไม่สามารถลบบัญชี Login ถาวรได้
+            Permanent Delete จะเปิดให้เฉพาะ Candidate ที่ไม่มี blocker ที่ตรวจพบ
+            และ Server จะตรวจสอบ Global Safety ซ้ำอีกครั้งก่อนลบจริง
           </CardDescription>
         </CardHeader>
 
@@ -401,6 +405,36 @@ export default async function LoginSecurityUsersPage() {
                       ยังผูก Employee ในองค์กรนี้อยู่
                     </p>
                   )}
+
+                  {!row.authExists && (
+                    <p className="text-xs text-muted-foreground">
+                      บัญชี Login นี้ไม่มีอยู่ใน Auth แล้ว
+                    </p>
+                  )}
+
+                  {row.authExists &&
+                    row.currentOrgMembership === 0 &&
+                    row.employeeCount === 0 &&
+                    row.prCount === 0 && (
+                      <div className="pt-2">
+                        <PermanentDeleteLoginButton
+                          userId={row.userId}
+                          orgId={ctx.orgId}
+                          email={row.email}
+                        />
+                      </div>
+                    )}
+
+                  {row.authExists &&
+                    (
+                      row.currentOrgMembership > 0 ||
+                      row.employeeCount > 0 ||
+                      row.prCount > 0
+                    ) && (
+                      <p className="text-xs text-muted-foreground">
+                        Permanent Delete ถูกปิดใช้งานจนกว่า blocker ที่แสดงด้านบนจะถูกแก้ไข
+                      </p>
+                    )}
                 </div>
               ))}
             </div>
