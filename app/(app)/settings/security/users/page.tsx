@@ -101,6 +101,103 @@ export default async function LoginSecurityUsersPage() {
     })
   )
 
+  const { data: removedEvents, error: removedEventsError } =
+    await adminClient
+      .from("audit_log")
+      .select("id, entity_id, actor_email, meta, created_at")
+      .eq("org_id", ctx.orgId)
+      .eq("entity", "membership")
+      .eq("action", "REMOVE_MEMBER")
+      .order("created_at", { ascending: false })
+
+  if (removedEventsError) {
+    throw new Error(removedEventsError.message)
+  }
+
+  // Keep only the latest removal event for each Login.
+  const latestRemovedEvents = []
+  const seenRemovedUsers = new Set<string>()
+
+  for (const event of removedEvents ?? []) {
+    const targetUserId =
+      event.entity_id ??
+      (
+        typeof event.meta === "object" &&
+        event.meta !== null &&
+        !Array.isArray(event.meta) &&
+        typeof (event.meta as Record<string, unknown>).target_user_id === "string"
+          ? (event.meta as Record<string, unknown>).target_user_id as string
+          : null
+      )
+
+    if (!targetUserId || seenRemovedUsers.has(targetUserId)) {
+      continue
+    }
+
+    seenRemovedUsers.add(targetUserId)
+
+    latestRemovedEvents.push({
+      ...event,
+      targetUserId,
+    })
+  }
+
+  const removedRows = await Promise.all(
+    latestRemovedEvents.map(async (event) => {
+      const meta =
+        typeof event.meta === "object" &&
+        event.meta !== null &&
+        !Array.isArray(event.meta)
+          ? event.meta as Record<string, unknown>
+          : {}
+
+      const [
+        authResult,
+        membershipResult,
+        employeeResult,
+        prResult,
+      ] = await Promise.all([
+        adminClient.auth.admin.getUserById(event.targetUserId),
+
+        adminClient
+          .from("memberships")
+          .select("*", { count: "exact", head: true })
+          .eq("user_id", event.targetUserId)
+          .eq("org_id", ctx.orgId),
+
+        adminClient
+          .from("employees")
+          .select("*", { count: "exact", head: true })
+          .eq("user_id", event.targetUserId)
+          .eq("org_id", ctx.orgId),
+
+        adminClient
+          .from("purchase_requests")
+          .select("*", { count: "exact", head: true })
+          .eq("requested_by", event.targetUserId)
+          .eq("org_id", ctx.orgId),
+      ])
+
+      const emailFromTombstone =
+        typeof meta.target_email === "string"
+          ? meta.target_email
+          : null
+
+      return {
+        userId: event.targetUserId,
+        email:
+          authResult.data.user?.email ??
+          emailFromTombstone ??
+          "Unknown",
+        removedAt: event.created_at,
+        removedBy: event.actor_email ?? "Unknown",
+        currentOrgMembership: membershipResult.count ?? 0,
+        employeeCount: employeeResult.count ?? 0,
+        prCount: prResult.count ?? 0,
+      }
+    })
+  )
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -206,6 +303,104 @@ export default async function LoginSecurityUsersPage() {
                       </div>
                     )}
                   </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">
+            Removed Login Candidates
+          </CardTitle>
+          <CardDescription>
+            ประวัติ Login ที่เคยถูกนำออกจากองค์กรนี้
+            ส่วนนี้เป็นข้อมูลแบบ Read-only และยังไม่สามารถลบบัญชี Login ถาวรได้
+          </CardDescription>
+        </CardHeader>
+
+        <CardContent>
+          {removedRows.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              ยังไม่มี Login ที่ถูกนำออกจากองค์กรนี้
+            </p>
+          ) : (
+            <div className="divide-y">
+              {removedRows.map((row) => (
+                <div
+                  key={row.userId}
+                  className="space-y-3 py-4 first:pt-0 last:pb-0"
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <p className="font-medium">
+                        {row.email}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {row.userId}
+                      </p>
+                    </div>
+
+                    {row.currentOrgMembership > 0 ? (
+                      <Badge variant="outline">
+                        กลับเข้าองค์กรแล้ว
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline">
+                        Removed
+                      </Badge>
+                    )}
+                  </div>
+
+                  <div className="grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-4">
+                    <div>
+                      <span className="text-muted-foreground">
+                        Current access:
+                      </span>{" "}
+                      {row.currentOrgMembership > 0 ? "Active" : "Removed"}
+                    </div>
+
+                    <div>
+                      <span className="text-muted-foreground">
+                        Employee link:
+                      </span>{" "}
+                      {row.employeeCount}
+                    </div>
+
+                    <div>
+                      <span className="text-muted-foreground">
+                        PR history:
+                      </span>{" "}
+                      {row.prCount}
+                    </div>
+
+                    <div>
+                      <span className="text-muted-foreground">
+                        Removed by:
+                      </span>{" "}
+                      {row.removedBy}
+                    </div>
+                  </div>
+
+                  <p className="text-xs text-muted-foreground">
+                    Removed at:{" "}
+                    {new Date(row.removedAt).toLocaleString("th-TH")}
+                  </p>
+
+                  {row.currentOrgMembership > 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      Login นี้กลับเข้ามาเป็นสมาชิกขององค์กรแล้ว
+                      จึงไม่ถือเป็น Removed Login Candidate ในสถานะปัจจุบัน
+                    </p>
+                  )}
+
+                  {row.employeeCount > 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      ยังผูก Employee ในองค์กรนี้อยู่
+                    </p>
+                  )}
                 </div>
               ))}
             </div>
