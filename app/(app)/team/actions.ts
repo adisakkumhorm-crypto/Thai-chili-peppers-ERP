@@ -106,6 +106,7 @@ export async function processJoinRequest(input: {
 
 export async function removeMember(input: { userId: string, orgId: string }) {
   const ctx = await requireOrgContext()
+
   try {
     requireRole(ctx, ["owner", "admin"])
   } catch {
@@ -115,40 +116,57 @@ export async function removeMember(input: { userId: string, orgId: string }) {
   if (input.orgId !== ctx.orgId) {
     return { error: "องค์กรเป้าหมายไม่ตรงกับองค์กรปัจจุบัน" }
   }
-  
+
   if (input.userId === ctx.userId) {
-    return { error: "ไม่สามารถลบบัญชีของตัวเองได้" }
+    return { error: "ไม่สามารถนำบัญชีของตัวเองออกจากองค์กรได้" }
   }
 
-  const adminClient = createAdminClient()
+  // IMPORTANT:
+  // Use the session-bound client so auth.uid() inside the RPC
+  // is the real signed-in actor. Membership removal, join-request
+  // cleanup, and the audit tombstone are atomic in the database.
+  const supabase = await createClient()
 
-  // Prevent deleting owner
-  const { data: targetMem } = await adminClient.from("memberships").select("role").eq("user_id", input.userId).eq("org_id", ctx.orgId).single()
-  if (targetMem?.role === "owner" && ctx.role !== "owner") {
-    return { error: "แอดมินไม่สามารถลบบัญชีเจ้าของระบบได้" }
+  const { error } = await (supabase as any).rpc(
+    "remove_member_with_tombstone",
+    {
+      p_target_user_id: input.userId,
+      p_org_id: input.orgId,
+    }
+  )
+
+  if (error) {
+    const message = error.message || ""
+
+    if (message.includes("SELF_REMOVE_BLOCKED")) {
+      return { error: "ไม่สามารถนำบัญชีของตัวเองออกจากองค์กรได้" }
+    }
+
+    if (message.includes("INSUFFICIENT_PERMISSION")) {
+      return { error: "ไม่มีสิทธิ์ในการนำสมาชิกออกจากองค์กร" }
+    }
+
+    if (message.includes("ADMIN_CANNOT_REMOVE_OWNER")) {
+      return { error: "แอดมินไม่สามารถนำ Owner ออกจากองค์กรได้" }
+    }
+
+    if (message.includes("CANNOT_REMOVE_LAST_OWNER")) {
+      return { error: "ไม่สามารถนำ Owner คนสุดท้ายออกจากองค์กรได้" }
+    }
+
+    if (message.includes("TARGET_NOT_IN_ORGANIZATION")) {
+      return { error: "ไม่พบบัญชีนี้ในองค์กรปัจจุบัน" }
+    }
+
+    return { error: message }
   }
-
-  // Remove access from this organization only.
-  // Employee lifecycle and the global Auth account are managed separately.
-  // This prevents Team access removal from deleting HR/business history.
-  const { error: memError } = await adminClient
-    .from("memberships")
-    .delete()
-    .eq("user_id", input.userId)
-    .eq("org_id", ctx.orgId)
-
-  if (memError) return { error: memError.message }
-
-  // A future join must start with a fresh request.
-  await adminClient
-    .from("join_requests" as any)
-    .delete()
-    .eq("user_id", input.userId)
-    .eq("org_id", ctx.orgId)
 
   revalidatePath("/team")
+  revalidatePath("/settings/security/users")
+
   return { success: true }
 }
+
 
 export async function updateMemberAccess(input: {
   userId: string
