@@ -2,6 +2,7 @@ import { cache } from "react"
 import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
 import type { Enums } from "@/lib/types/database"
+import { normalizeAllowedFeatures } from "@/lib/platform/feature-identity"
 
 export type Role = Enums<"role_enum">
 
@@ -62,7 +63,9 @@ export const getOrgContext = cache(async (): Promise<OrgContext | null> => {
     orgName: org.name,
     role: memberships.role as Role,
     employeeRole: ((employees as any[])?.[0]?.role) ?? null,
-    allowedFeatures: ((employees as any[])?.[0]?.allowed_features) ?? [],
+    allowedFeatures: normalizeAllowedFeatures(
+      ((employees as any[])?.[0]?.allowed_features) ?? []
+    ),
     timezone: (org as any).timezone || "Asia/Bangkok",
   }
 })

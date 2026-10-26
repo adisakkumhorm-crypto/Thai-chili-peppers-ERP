@@ -64,4 +64,48 @@ describe("feature identity compatibility", () => {
       )
     ).toBe(false)
   })
+
+  it("normalizes mixed legacy and canonical stored values safely", () => {
+    const normalized = normalizeAllowedFeatures([
+      "dashboard",
+      "projects",
+      "inventory",
+      "sales",
+      "hr",
+      "finance",
+      "settings",
+      "/clients",
+      "/deals",
+      "/projects",
+      "/inventory",
+      "/products",
+      "/sales",
+      "/hr",
+      "/hr/payroll",
+      "/suppliers",
+      "/purchases",
+      "/finance",
+      "/team",
+      "/settings",
+    ])
+
+    expect(normalized).toContain("/dashboard")
+    expect(normalized).toContain("/projects")
+    expect(normalized).toContain("/deals")
+    expect(normalized).toContain("/inventory")
+    expect(normalized).toContain("/sales")
+    expect(normalized).toContain("/hr")
+    expect(normalized).toContain("/hr/payroll")
+    expect(normalized).toContain("/finance")
+    expect(normalized).toContain("/purchases")
+    expect(normalized).toContain("/settings")
+    expect(normalized).toContain("/team")
+
+    expect(normalized).not.toContain("finance")
+    expect(normalized).not.toContain("projects")
+
+    expect(new Set(normalized).size).toBe(
+      normalized.length
+    )
+  })
 })
