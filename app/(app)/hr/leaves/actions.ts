@@ -7,7 +7,7 @@ import { calculateWorkingDays } from "@/lib/leave"
 
 export async function updateLeaveStatus(requestId: string, status: "approved" | "rejected") {
   const ctx = await requireOrgContext()
-  requireFeatureAccessOrRedirect(ctx, "/my-leave")
+  requireFeatureAccessOrRedirect(ctx, "/hr")
   
   const supabase = await createSupabaseClient()
 

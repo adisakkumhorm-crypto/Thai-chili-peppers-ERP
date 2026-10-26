@@ -18,7 +18,7 @@ function LeaveStatusBadge({ status }: { status: string }) {
 
 export default async function HRLeavesPage({ searchParams }: { searchParams: Promise<{ q?: string; dept?: string }> }) {
   const ctx = await requireOrgContext()
-  requireFeatureAccessOrRedirect(ctx, "/my-leave")
+  requireFeatureAccessOrRedirect(ctx, "/hr")
   
   const supabase = await createClient()
 

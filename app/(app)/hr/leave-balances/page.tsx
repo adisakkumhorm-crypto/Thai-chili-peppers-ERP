@@ -2,7 +2,7 @@ import Link from "next/link"
 import { ArrowLeft, FileSpreadsheet } from "lucide-react"
 
 import { createClient } from "@/lib/supabase/server"
-import { requireOrgContext } from "@/lib/auth"
+import { requireOrgContext, requireFeatureAccessOrRedirect } from "@/lib/auth"
 import { PageHeader } from "@/components/page-header"
 import { Button } from "@/components/ui/button"
 import { HrFilterBar } from "../_components/hr-filter-bar"
@@ -11,6 +11,7 @@ export const dynamic = "force-dynamic"
 
 export default async function LeaveBalancesPage({ searchParams }: { searchParams: Promise<{ q?: string; dept?: string }> }) {
   const ctx = await requireOrgContext()
+  requireFeatureAccessOrRedirect(ctx, "/hr")
   const supabase = await createClient()
 
   const currentYear = new Date().getFullYear()
