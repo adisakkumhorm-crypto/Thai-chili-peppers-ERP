@@ -2716,6 +2716,25 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      rpc_timesheet_punch: {
+        Args: {
+          p_org_id: string
+          p_intent: string
+          p_employee_id?: string | null
+          p_project_id?: string | null
+          p_photo_path?: string | null
+          p_location?: Json | null
+        }
+        Returns: Json
+      }
+      rpc_update_timesheet_ot_multiplier: {
+        Args: {
+          p_org_id: string
+          p_timesheet_id: string
+          p_multiplier: number
+        }
+        Returns: Json
+      }
       create_automated_journal_entry: {
         Args: {
           p_description: string
