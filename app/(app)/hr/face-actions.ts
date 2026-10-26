@@ -3,7 +3,10 @@
 import { revalidatePath } from "next/cache"
 
 import { createClient as createSupabaseClient } from "@/lib/supabase/server"
-import { requireOrgContext } from "@/lib/auth"
+import {
+  requireFeatureAccess,
+  requireOrgContext,
+} from "@/lib/auth"
 
 type PunchLocation = {
   lat: number
@@ -17,18 +20,101 @@ type PunchResult = {
   hours?: number
 } | null
 
+type FaceTemplateRpcRow = {
+  employee_id: string
+  first_name: string
+  last_name: string
+  descriptor: unknown
+}
+
+
+function normalizeDescriptor(value: unknown): number[] | null {
+  let candidate = value
+
+  /*
+   * Compatibility for any historical JSON-string representation.
+   */
+  if (typeof candidate === "string") {
+    try {
+      candidate = JSON.parse(candidate)
+    } catch {
+      return null
+    }
+  }
+
+  if (
+    !Array.isArray(candidate)
+    || candidate.length !== 128
+    || candidate.some(
+      (item) =>
+        typeof item !== "number"
+        || !Number.isFinite(item)
+    )
+  ) {
+    return null
+  }
+
+  return candidate
+}
+
+
 export async function getEmployeesForFaceScan() {
   const ctx = await requireOrgContext()
   const supabase = await createSupabaseClient()
 
-  const { data } = await supabase
-    .from("employees")
-    .select("id, first_name, last_name, face_descriptor")
-    .eq("org_id", ctx.orgId)
-    .not("face_descriptor", "is", null)
+  /*
+   * SECURITY-HR-001D-A:
+   *
+   * The database capability decides the visibility scope.
+   *
+   *   /hr      -> all enrolled active employees in this org
+   *   /check-in -> caller's own linked employee only
+   */
+  const { data, error } = await supabase.rpc(
+    "rpc_face_scan_templates",
+    {
+      p_org_id: ctx.orgId,
+    }
+  )
 
-  return data || []
+  if (error) {
+    throw new Error(error.message)
+  }
+
+  return (
+    (data as FaceTemplateRpcRow[] | null) ?? []
+  )
+    .map((row) => {
+      const descriptor =
+        normalizeDescriptor(row.descriptor)
+
+      if (!descriptor) {
+        return null
+      }
+
+      /*
+       * Preserve the client contract used by both existing face scanners.
+       */
+      return {
+        id: row.employee_id,
+        first_name: row.first_name,
+        last_name: row.last_name,
+        face_descriptor:
+          JSON.stringify(descriptor),
+      }
+    })
+    .filter(
+      (
+        row
+      ): row is {
+        id: string
+        first_name: string
+        last_name: string
+        face_descriptor: string
+      } => row !== null
+    )
 }
+
 
 export async function processFaceCheckIn(
   employeeId: string,
@@ -64,10 +150,13 @@ export async function processFaceCheckIn(
   )
 
   if (error) {
-    return { error: error.message }
+    return {
+      error: error.message,
+    }
   }
 
-  const result = data as PunchResult
+  const result =
+    data as PunchResult
 
   revalidatePath("/check-in")
   revalidatePath("/hr")
@@ -86,31 +175,57 @@ export async function processFaceCheckIn(
   }
 }
 
+
 export async function updateFaceDescriptor(
   employeeId: string,
   descriptor: number[]
 ) {
   const ctx = await requireOrgContext()
-  const supabase = await createSupabaseClient()
 
   /*
-   * Face enrollment authorization is intentionally handled separately
-   * by SECURITY-HR-001D.
+   * Defense in depth:
+   * page guard + server-action guard + database capability.
    */
-  const { error } = await supabase
-    .from("employees")
-    .update({
-      face_descriptor: JSON.stringify(descriptor),
-    })
-    .eq("id", employeeId)
-    .eq("org_id", ctx.orgId)
+  requireFeatureAccess(ctx, "/hr")
+
+  if (
+    descriptor.length !== 128
+    || descriptor.some(
+      (value) =>
+        typeof value !== "number"
+        || !Number.isFinite(value)
+    )
+  ) {
+    return {
+      error: "Invalid face descriptor",
+    }
+  }
+
+  const supabase =
+    await createSupabaseClient()
+
+  const { error } = await supabase.rpc(
+    "rpc_set_face_template",
+    {
+      p_org_id: ctx.orgId,
+      p_employee_id: employeeId,
+      p_descriptor: descriptor,
+    }
+  )
 
   if (error) {
-    return { error: error.message }
+    return {
+      error: error.message,
+    }
   }
 
   revalidatePath("/hr")
   revalidatePath("/hr/employees")
+  revalidatePath(
+    `/hr/employees/${employeeId}/face`
+  )
 
-  return { success: true }
+  return {
+    success: true,
+  }
 }

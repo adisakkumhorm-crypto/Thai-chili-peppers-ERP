@@ -697,7 +697,6 @@ export type Database = {
           department: string | null
           employee_code: string
           employment_type: Database["public"]["Enums"]["employment_type"] | null
-          face_descriptor: Json | null
           first_name: string
           id: string
           is_active: boolean | null
@@ -719,7 +718,6 @@ export type Database = {
           employment_type?:
             | Database["public"]["Enums"]["employment_type"]
             | null
-          face_descriptor?: Json | null
           first_name: string
           id?: string
           is_active?: boolean | null
@@ -741,7 +739,6 @@ export type Database = {
           employment_type?:
             | Database["public"]["Enums"]["employment_type"]
             | null
-          face_descriptor?: Json | null
           first_name?: string
           id?: string
           is_active?: boolean | null
@@ -2716,6 +2713,33 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      rpc_face_enrollment_statuses: {
+        Args: {
+          p_org_id: string
+        }
+        Returns: {
+          employee_id: string
+        }[]
+      }
+      rpc_face_scan_templates: {
+        Args: {
+          p_org_id: string
+        }
+        Returns: {
+          descriptor: Json
+          employee_id: string
+          first_name: string
+          last_name: string
+        }[]
+      }
+      rpc_set_face_template: {
+        Args: {
+          p_descriptor: Json
+          p_employee_id: string
+          p_org_id: string
+        }
+        Returns: Json
+      }
       rpc_timesheet_punch: {
         Args: {
           p_org_id: string

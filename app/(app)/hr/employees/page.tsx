@@ -2,7 +2,7 @@ import Link from "next/link"
 import { ArrowLeft, Plus, ScanFace } from "lucide-react"
 
 import { createClient } from "@/lib/supabase/server"
-import { requireOrgContext } from "@/lib/auth"
+import { requireOrgContext, requireFeatureAccessOrRedirect } from "@/lib/auth"
 import { PageHeader } from "@/components/page-header"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -12,6 +12,7 @@ export const dynamic = "force-dynamic"
 
 export default async function EmployeesPage({ searchParams }: { searchParams: Promise<{ q?: string; dept?: string }> }) {
   const ctx = await requireOrgContext()
+  requireFeatureAccessOrRedirect(ctx, "/hr")
   const supabase = await createClient()
 
   // Use select(*) to avoid type inference issues with new columns
@@ -34,6 +35,28 @@ export default async function EmployeesPage({ searchParams }: { searchParams: Pr
   query = query.order("first_name")
 
   const { data: employees } = await query
+
+  const {
+    data: faceStatuses,
+    error: faceStatusError,
+  } = await supabase.rpc(
+    "rpc_face_enrollment_statuses",
+    {
+      p_org_id: ctx.orgId,
+    }
+  )
+
+  if (faceStatusError) {
+    throw new Error(
+      faceStatusError.message
+    )
+  }
+
+  const faceEnrollmentIds = new Set(
+    (faceStatuses ?? []).map(
+      (row) => row.employee_id
+    )
+  )
     
   const { data: shifts } = await supabase.from("shifts" as any).select("*").eq("org_id", ctx.orgId);
   const shiftMap = (shifts || []).reduce((acc: any, s: any) => {
@@ -104,7 +127,7 @@ export default async function EmployeesPage({ searchParams }: { searchParams: Pr
                   </td>
                   <td className="p-4 text-right font-medium text-emerald-600">฿{emp.daily_wage.toFixed(2)}</td>
                   <td className="p-4 text-center">
-                    {emp.face_descriptor ? (
+                    {faceEnrollmentIds.has(emp.id) ? (
                       <Badge variant="outline" className="text-emerald-600 border-emerald-200 bg-emerald-50">มีข้อมูลแล้ว</Badge>
                     ) : (
                       <Badge variant="secondary" className="text-muted-foreground">ยังไม่มี</Badge>
