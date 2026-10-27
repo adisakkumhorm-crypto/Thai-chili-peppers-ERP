@@ -136,19 +136,46 @@ export function CheckInClient({ projects }: { projects: any[] }) {
       const ctx = canvas.getContext('2d')
       ctx?.drawImage(videoRef.current, 0, 0)
       
-      const blob = await new Promise<Blob | null>(res => canvas.toBlob(res, 'image/jpeg', 0.8))
-      let photoPath = null
-      
-      if (blob) {
-        const filename = `${employeeId}-${Date.now()}.jpg`
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from("timesheet-photos")
-          .upload(filename, blob, { contentType: "image/jpeg" })
-          
-        if (!uploadError && uploadData) {
-          photoPath = uploadData.path
-        }
+      const blob = await new Promise<Blob | null>(
+        (resolve) =>
+          canvas.toBlob(
+            resolve,
+            "image/jpeg",
+            0.8
+          )
+      )
+
+      if (!blob) {
+        throw new Error(
+          "ไม่สามารถสร้างรูปหลักฐานการลงเวลาได้"
+        )
       }
+
+      const filename =
+        `${employeeId}/${crypto.randomUUID()}.jpg`
+
+      const {
+        data: uploadData,
+        error: uploadError,
+      } = await supabase.storage
+        .from("timesheet-photos")
+        .upload(
+          filename,
+          blob,
+          {
+            contentType: "image/jpeg",
+            upsert: false,
+          }
+        )
+
+      if (uploadError || !uploadData) {
+        throw new Error(
+          uploadError?.message
+            || "ไม่สามารถบันทึกรูปหลักฐานการลงเวลาได้"
+        )
+      }
+
+      const photoPath = uploadData.path
       
       const res = await processFaceCheckIn(employeeId, projectId || null, photoPath, location, intent || undefined)
       
