@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarRail } from "@/components/ui/sidebar"
 import { cn } from "@/lib/utils"
+import { hasUniversalFeatureAccess } from "@/lib/platform/access-policy"
 import { ThemeSwitcher } from "@/components/theme-switcher"
 
 export function AppSidebar({ email, role, employeeRole, orgName, allowedFeatures = [] }: any) {
@@ -32,7 +33,12 @@ export function AppSidebar({ email, role, employeeRole, orgName, allowedFeatures
           <SidebarGroupContent>
             <SidebarMenu className="gap-2">
               {NAV_ITEMS.filter((item) => {
-                if (role === "owner" || role === "admin" || employeeRole === "admin" || employeeRole === "executive") return true;
+                if (
+                  hasUniversalFeatureAccess({
+                    membershipRole: role,
+                    employeeRole,
+                  })
+                ) return true;
                 if (item.isBasic) return true;
                 if (allowedFeatures && allowedFeatures.includes(item.href)) return true;
                 return false;

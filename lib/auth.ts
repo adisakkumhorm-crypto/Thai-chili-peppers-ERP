@@ -3,6 +3,7 @@ import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
 import type { Enums } from "@/lib/types/database"
 import { normalizeAllowedFeatures } from "@/lib/platform/feature-identity"
+import { hasUniversalFeatureAccess } from "@/lib/platform/access-policy"
 
 export type Role = Enums<"role_enum">
 
@@ -102,7 +103,12 @@ export function requireEmployeeRole(ctx: OrgContext, allowedRoles: EmployeeRole[
 
 
 export function requireFeatureAccess(ctx: OrgContext, featurePath: string): void {
-  if (ctx.role === "owner" || ctx.role === "admin" || ctx.employeeRole === "admin" ) return;
+  if (
+    hasUniversalFeatureAccess({
+      membershipRole: ctx.role,
+      employeeRole: ctx.employeeRole,
+    })
+  ) return;
   const basicPaths = ["/dashboard", "/check-in", "/my-leave"];
   if (basicPaths.some(p => featurePath === p || featurePath.startsWith(`${p}/`))) return;
   
