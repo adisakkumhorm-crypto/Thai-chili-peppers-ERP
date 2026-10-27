@@ -24,7 +24,12 @@ export default async function NewEmployeePage() {
         </Button>
       </PageHeader>
       <div className="p-6 border rounded-md bg-card">
-        <EmployeeForm shifts={shifts || []} />
+        <EmployeeForm
+          shifts={shifts || []}
+          canGrantEmployeeAdmin={
+            ctx.role === "owner"
+          }
+        />
       </div>
     </div>
   )

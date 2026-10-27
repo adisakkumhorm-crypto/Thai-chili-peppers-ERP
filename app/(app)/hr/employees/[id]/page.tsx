@@ -118,7 +118,7 @@ export default async function EditEmployeePage(props: {
 
         if (
           ctx.role !== "owner" &&
-          membership.role === "owner"
+          membership.role !== "member"
         ) {
           return false
         }
@@ -173,6 +173,9 @@ export default async function EditEmployeePage(props: {
         currentYear={currentYear}
         shifts={shifts || []}
         canManageAccounts={canManageAccounts}
+        canGrantEmployeeAdmin={
+          ctx.role === "owner"
+        }
         accountOptions={accountOptions}
         linkedAccount={linkedAccount}
       />

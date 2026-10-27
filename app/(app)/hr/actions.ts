@@ -5,6 +5,9 @@ import { z } from "zod"
 import { redirect } from "next/navigation"
 import { createClient as createSupabaseClient } from "@/lib/supabase/server"
 import { requireOrgContext, requireRole } from "@/lib/auth"
+import {
+  canAssignEmployeeRole,
+} from "@/lib/platform/access-policy"
 
 const EmployeeInput = z.object({
   employee_code: z.string().min(1, "Required"),
@@ -35,6 +38,18 @@ export async function createEmployee(
 
   if (!parsed.success) {
     return { error: "ข้อมูลพนักงานไม่ถูกต้อง" }
+  }
+
+  if (
+    !canAssignEmployeeRole(
+      ctx.role,
+      parsed.data.role
+    )
+  ) {
+    return {
+      error:
+        "เฉพาะ Owner เท่านั้นที่กำหนด Employee Admin ได้",
+    }
   }
 
   const employeeCode =

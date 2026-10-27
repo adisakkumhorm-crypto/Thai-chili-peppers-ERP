@@ -19,3 +19,77 @@ export function hasUniversalFeatureAccess(
     identity.employeeRole === "admin"
   )
 }
+
+const MEMBERSHIP_ACCESS_ROLES = new Set([
+  "owner",
+  "admin",
+  "member",
+])
+
+const EMPLOYEE_ACCESS_ROLES = new Set([
+  "staff",
+  "foreman",
+  "manager",
+  "executive",
+  "admin",
+])
+
+export function canAssignMembershipRole(
+  actorMembershipRole: string | null | undefined,
+  requestedRole: string | null | undefined
+): boolean {
+  if (!requestedRole || !MEMBERSHIP_ACCESS_ROLES.has(requestedRole)) {
+    return false
+  }
+
+  if (actorMembershipRole === "owner") return true
+
+  return (
+    actorMembershipRole === "admin" &&
+    requestedRole === "member"
+  )
+}
+
+export function canAssignEmployeeRole(
+  actorMembershipRole: string | null | undefined,
+  requestedRole: string | null | undefined
+): boolean {
+  if (!requestedRole || !EMPLOYEE_ACCESS_ROLES.has(requestedRole)) {
+    return false
+  }
+
+  if (actorMembershipRole === "owner") return true
+
+  return (
+    actorMembershipRole === "admin" &&
+    requestedRole !== "admin"
+  )
+}
+
+export function canManageAccessTarget(
+  actorMembershipRole: string | null | undefined,
+  targetMembershipRole: string | null | undefined,
+  targetEmployeeRole: string | null | undefined
+): boolean {
+  if (
+    !targetMembershipRole ||
+    !MEMBERSHIP_ACCESS_ROLES.has(targetMembershipRole)
+  ) {
+    return false
+  }
+
+  if (
+    targetEmployeeRole != null &&
+    !EMPLOYEE_ACCESS_ROLES.has(targetEmployeeRole)
+  ) {
+    return false
+  }
+
+  if (actorMembershipRole === "owner") return true
+  if (actorMembershipRole !== "admin") return false
+
+  return (
+    targetMembershipRole === "member" &&
+    targetEmployeeRole !== "admin"
+  )
+}

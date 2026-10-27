@@ -6,6 +6,9 @@ import { z } from "zod"
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { requireOrgContext, requireRole } from "@/lib/auth"
+import {
+  canAssignEmployeeRole,
+} from "@/lib/platform/access-policy"
 import { bahtToSatang } from "@/lib/money"
 import { writeAudit } from "@/lib/audit"
 
@@ -85,6 +88,22 @@ export async function processJoinRequest(input: {
     return { error: "Only an owner or admin can process join requests." }
   }
 
+  const requestedEmployeeRole =
+    input.employeeRole ?? "staff"
+
+  if (
+    input.action === "approve" &&
+    !canAssignEmployeeRole(
+      ctx.role,
+      requestedEmployeeRole
+    )
+  ) {
+    return {
+      error:
+        "Only the owner can grant employee-admin authority.",
+    }
+  }
+
   const adminClient = createAdminClient()
 
   const { data: rawReq, error: reqError } = await adminClient
@@ -97,6 +116,13 @@ export async function processJoinRequest(input: {
 
   if (reqError || !req) {
     return { error: "Join request not found." }
+  }
+
+  if (req.org_id !== ctx.orgId) {
+    return {
+      error:
+        "Join request does not belong to this organization.",
+    }
   }
 
   if (input.action === 'reject') {
@@ -135,7 +161,7 @@ export async function processJoinRequest(input: {
           employee_code: input.employeeCode || `EMP${Math.floor(Math.random() * 10000)}`,
           first_name: input.firstName || "New",
           last_name: input.lastName || "Employee",
-          role: input.employeeRole || 'staff'
+          role: requestedEmployeeRole
         })
       if (empErr) console.error("Employee creation error:", empErr)
     } else if (input.employeeOption === 'link' && input.employeeId) {
@@ -143,7 +169,7 @@ export async function processJoinRequest(input: {
         .from("employees")
         .update({
           user_id: req.user_id,
-          role: input.employeeRole || 'staff'
+          role: requestedEmployeeRole
         })
         .eq("id", input.employeeId)
       if (empErr) console.error("Employee link error:", empErr)

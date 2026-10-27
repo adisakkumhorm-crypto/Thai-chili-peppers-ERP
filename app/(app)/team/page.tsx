@@ -1,6 +1,9 @@
 import { Users, ShieldCheck } from "lucide-react"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { requireOrgContext } from "@/lib/auth"
+import {
+  canManageAccessTarget,
+} from "@/lib/platform/access-policy"
 import { PageHeader } from "@/components/page-header"
 import { EmptyState } from "@/components/empty-state"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
@@ -123,7 +126,13 @@ export default async function TeamPage() {
         description="จัดการพนักงาน อนุมัติการเข้าใช้งาน และกำหนดสิทธิ์ในระบบ"
       />
 
-      {canEdit && <JoinRequests requests={requests} unlinkedEmployees={unlinkedEmployees} />}
+      {canEdit && (
+        <JoinRequests
+          requests={requests}
+          unlinkedEmployees={unlinkedEmployees}
+          actorRole={ctx.role}
+        />
+      )}
 
       <Card>
         <CardHeader>
@@ -185,8 +194,11 @@ export default async function TeamPage() {
                       </Badge>
                     )}
                     {canEdit &&
-                      (ctx.role === "owner" ||
-                        member.membershipRole !== "owner") && (
+                      canManageAccessTarget(
+                        ctx.role,
+                        member.membershipRole,
+                        member.employeeRole
+                      ) && (
                         <EditMemberButton
                           userId={member.userId}
                           orgId={ctx.orgId}

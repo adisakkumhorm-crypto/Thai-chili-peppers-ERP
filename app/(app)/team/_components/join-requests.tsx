@@ -52,12 +52,14 @@ const AVAILABLE_FEATURES = [
   { id: "settings", label: "Settings & Team (ตั้งค่าระบบและทีม)" },
 ]
 
-export function JoinRequests({ 
+export function JoinRequests({
   requests,
-  unlinkedEmployees
-}: { 
+  unlinkedEmployees,
+  actorRole,
+}: {
   requests: Request[]
   unlinkedEmployees: Employee[]
+  actorRole: "owner" | "admin" | "member"
 }) {
   const router = useRouter()
   const [loadingId, setLoadingId] = useState<string | null>(null)
@@ -115,9 +117,9 @@ export function JoinRequests({
     if (!selectedReq) return
     setLoadingId(selectedReq.id)
     
-    // Auto grant all features for admin/executive
-    const finalFeatures = (empRole === "admin" || empRole === "executive") 
-      ? AVAILABLE_FEATURES.map(f => f.id) 
+    // Employee Admin is universal; Executive uses explicit features.
+    const finalFeatures = empRole === "admin"
+      ? AVAILABLE_FEATURES.map(f => f.id)
       : allowedFeatures
 
     const res = await processJoinRequest({
@@ -295,13 +297,20 @@ export function JoinRequests({
                       <SelectItem value="foreman">หัวหน้างาน (Foreman)</SelectItem>
                       <SelectItem value="manager">ผู้จัดการ (Manager)</SelectItem>
                       <SelectItem value="executive">ผู้บริหาร (Executive)</SelectItem>
-                      <SelectItem value="admin">ผู้ดูแลระบบ (Admin)</SelectItem>
+                      {actorRole === "owner" && (
+                        <SelectItem value="admin">
+                          ผู้ดูแลระบบ (Admin)
+                        </SelectItem>
+                      )}
                     </SelectContent>
                   </Select>
-                  <p className="text-xs text-muted-foreground mt-1">ผู้บริหารและผู้ดูแลระบบจะเข้าถึงได้ทุกฟังก์ชันอัตโนมัติ</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Executive ใช้ Feature Access ที่เลือกไว้ ส่วน Employee Admin
+                    จะเข้าถึงทุกฟังก์ชันอัตโนมัติ
+                  </p>
                 </div>
 
-                {(empRole !== "admin" && empRole !== "executive") && (
+                {empRole !== "admin" && (
                   <div className="space-y-3 border-t pt-4">
                     <Label className="text-base font-semibold">การเข้าถึงฟังก์ชัน (Feature Access)</Label>
                     <p className="text-xs text-muted-foreground mb-2">เลือกเฉพาะฟังก์ชันที่ต้องการให้พนักงานคนนี้เห็นและใช้งานได้</p>

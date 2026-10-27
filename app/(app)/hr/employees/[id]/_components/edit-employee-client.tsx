@@ -33,6 +33,7 @@ export function EditEmployeeClient({
   currentYear,
   shifts = [],
   canManageAccounts = false,
+  canGrantEmployeeAdmin = false,
   accountOptions = [],
   linkedAccount = null,
 }: {
@@ -41,6 +42,7 @@ export function EditEmployeeClient({
   currentYear: number
   shifts?: any[]
   canManageAccounts?: boolean
+  canGrantEmployeeAdmin?: boolean
   accountOptions?: AccountOption[]
   linkedAccount?: LinkedAccount | null
 }) {
@@ -263,7 +265,11 @@ export function EditEmployeeClient({
                   <option value="foreman">โฟร์แมน / หัวหน้างาน (Foreman)</option>
                   <option value="manager">ผู้จัดการ (Manager)</option>
                   <option value="executive">ผู้บริหาร (Executive)</option>
-                  <option value="admin">แอดมินระบบฝ่ายงาน (Admin)</option>
+                  {canGrantEmployeeAdmin && (
+                    <option value="admin">
+                      แอดมินระบบฝ่ายงาน (Admin)
+                    </option>
+                  )}
                 </select>
               </div>
               <div className="space-y-1 col-span-2">

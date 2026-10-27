@@ -4,6 +4,11 @@ import { revalidatePath } from "next/cache"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { createClient } from "@/lib/supabase/server"
 import { requireOrgContext, requireRole } from "@/lib/auth"
+import {
+  canAssignEmployeeRole,
+  canAssignMembershipRole,
+  canManageAccessTarget,
+} from "@/lib/platform/access-policy"
 
 export async function processJoinRequest(input: {
   requestId: string
@@ -22,6 +27,22 @@ export async function processJoinRequest(input: {
     requireRole(ctx, ["owner", "admin"])
   } catch {
     return { error: "Only an owner or admin can process join requests." }
+  }
+
+  const requestedEmployeeRole =
+    input.employeeRole ?? "staff"
+
+  if (
+    input.action === "approve" &&
+    !canAssignEmployeeRole(
+      ctx.role,
+      requestedEmployeeRole
+    )
+  ) {
+    return {
+      error:
+        "Only the owner can grant employee-admin authority.",
+    }
   }
 
   const adminClient = createAdminClient()
@@ -78,7 +99,7 @@ export async function processJoinRequest(input: {
           employee_code: input.employeeCode || `EMP${Math.floor(Math.random() * 10000)}`,
           first_name: input.firstName || "New",
           last_name: input.lastName || "Employee",
-          role: input.employeeRole as any,
+          role: requestedEmployeeRole as any,
           position: input.position || null,
           allowed_features: input.allowedFeatures || []
         } as any)
@@ -88,7 +109,7 @@ export async function processJoinRequest(input: {
         .from("employees")
         .update({
           user_id: req.user_id,
-          role: input.employeeRole as any,
+          role: requestedEmployeeRole as any,
           allowed_features: input.allowedFeatures || []
         } as any)
         .eq("id", input.employeeId)
@@ -213,9 +234,89 @@ export async function updateMemberAccess(input: {
   if (
     input.allowedFeatures !== null &&
     (!Array.isArray(input.allowedFeatures) ||
-      !input.allowedFeatures.every((item) => typeof item === "string"))
+      !input.allowedFeatures.every(
+        (item) => typeof item === "string"
+      ))
   ) {
     return { error: "Feature permissions ไม่ถูกต้อง" }
+  }
+
+  if (
+    input.membershipRole !== null &&
+    !canAssignMembershipRole(
+      ctx.role,
+      input.membershipRole
+    )
+  ) {
+    return {
+      error:
+        "Only the owner can grant Owner/Admin organization authority.",
+    }
+  }
+
+  if (
+    input.employeeRole !== null &&
+    !canAssignEmployeeRole(
+      ctx.role,
+      input.employeeRole
+    )
+  ) {
+    return {
+      error:
+        "Only the owner can grant employee-admin authority.",
+    }
+  }
+
+  const adminClient = createAdminClient()
+
+  const {
+    data: targetMembership,
+    error: targetMembershipError,
+  } = await adminClient
+    .from("memberships")
+    .select("role")
+    .eq("user_id", input.userId)
+    .eq("org_id", input.orgId)
+    .maybeSingle()
+
+  if (
+    targetMembershipError ||
+    !targetMembership
+  ) {
+    return {
+      error:
+        "Target user not found in current organization.",
+    }
+  }
+
+  const {
+    data: targetEmployee,
+    error: targetEmployeeError,
+  } = await adminClient
+    .from("employees")
+    .select("role")
+    .eq("user_id", input.userId)
+    .eq("org_id", input.orgId)
+    .maybeSingle()
+
+  if (targetEmployeeError) {
+    return {
+      error:
+        "Unable to verify target employee authority.",
+    }
+  }
+
+  if (
+    !canManageAccessTarget(
+      ctx.role,
+      targetMembership.role,
+      targetEmployee?.role ?? null
+    )
+  ) {
+    return {
+      error:
+        "You cannot modify this account's access authority.",
+    }
   }
 
   // IMPORTANT:

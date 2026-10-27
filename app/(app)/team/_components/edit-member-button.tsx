@@ -83,7 +83,7 @@ export function EditMemberButton({
 
     const finalFeatures =
       hasEmployeeRecord &&
-      (employeeRole === "admin" || employeeRole === "executive")
+      employeeRole === "admin"
         ? AVAILABLE_FEATURES.map((feature) => feature.id)
         : allowedFeatures
 
@@ -178,9 +178,11 @@ export function EditMemberButton({
                     สมาชิก (Member)
                   </SelectItem>
 
-                  <SelectItem value="admin">
-                    ผู้ดูแลระบบ (Admin)
-                  </SelectItem>
+                  {actorRole === "owner" && (
+                    <SelectItem value="admin">
+                      ผู้ดูแลระบบ (Admin)
+                    </SelectItem>
+                  )}
 
                   {actorRole === "owner" && (
                     <SelectItem value="owner">
@@ -225,9 +227,11 @@ export function EditMemberButton({
                       <SelectItem value="executive">
                         ผู้บริหาร (Executive)
                       </SelectItem>
-                      <SelectItem value="admin">
-                        ผู้ดูแลระบบฝ่ายงาน (Admin)
-                      </SelectItem>
+                      {actorRole === "owner" && (
+                        <SelectItem value="admin">
+                          ผู้ดูแลระบบฝ่ายงาน (Admin)
+                        </SelectItem>
+                      )}
                     </SelectContent>
                   </Select>
 
@@ -236,8 +240,7 @@ export function EditMemberButton({
                   </p>
                 </div>
 
-                {employeeRole !== "admin" &&
-                  employeeRole !== "executive" && (
+                {employeeRole !== "admin" && (
                     <div className="space-y-3 border-t border-white/10 pt-4">
                       <Label className="text-base font-semibold">
                         การเข้าถึงฟังก์ชัน (Feature Access)
@@ -274,10 +277,9 @@ export function EditMemberButton({
                     </div>
                   )}
 
-                {(employeeRole === "admin" ||
-                  employeeRole === "executive") && (
+                {employeeRole === "admin" && (
                   <p className="text-xs text-muted-foreground border-t border-white/10 pt-4">
-                    Role นี้จะได้รับ Feature Access ที่มีอยู่ทั้งหมดอัตโนมัติ
+                    Employee Admin จะได้รับ Feature Access ทั้งหมดอัตโนมัติ
                   </p>
                 )}
               </>

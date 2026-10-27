@@ -4,6 +4,10 @@ import { revalidatePath } from "next/cache"
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { requireOrgContext, requireRole } from "@/lib/auth"
+import {
+  canAssignEmployeeRole,
+  canManageAccessTarget,
+} from "@/lib/platform/access-policy"
 
 const EMPLOYEE_ROLES = new Set([
   "staff",
@@ -12,6 +16,79 @@ const EMPLOYEE_ROLES = new Set([
   "executive",
   "admin",
 ])
+
+async function validateEmployeeLifecycleAuthority(
+  ctx: {
+    role: string
+    orgId: string
+  },
+  employeeId: string
+): Promise<{ error?: string }> {
+  if (ctx.role === "owner") {
+    return {}
+  }
+
+  const adminClient = createAdminClient()
+
+  const {
+    data: employee,
+    error: employeeError,
+  } = await adminClient
+    .from("employees")
+    .select("id, user_id, role")
+    .eq("id", employeeId)
+    .eq("org_id", ctx.orgId)
+    .maybeSingle()
+
+  if (employeeError || !employee) {
+    return {
+      error: "ไม่พบ Employee Record ในองค์กรนี้",
+    }
+  }
+
+  if (
+    !canAssignEmployeeRole(
+      ctx.role,
+      employee.role
+    )
+  ) {
+    return {
+      error:
+        "Admin ไม่สามารถจัดการ Employee Admin ได้",
+    }
+  }
+
+  if (!employee.user_id) {
+    return {}
+  }
+
+  const {
+    data: membership,
+    error: membershipError,
+  } = await adminClient
+    .from("memberships")
+    .select("role")
+    .eq("user_id", employee.user_id)
+    .eq("org_id", ctx.orgId)
+    .maybeSingle()
+
+  if (
+    membershipError ||
+    !membership ||
+    !canManageAccessTarget(
+      ctx.role,
+      membership.role,
+      employee.role
+    )
+  ) {
+    return {
+      error:
+        "Admin ไม่สามารถจัดการ Owner/Admin หรือ Employee Admin ได้",
+    }
+  }
+
+  return {}
+}
 
 export async function updateEmployee(id: string, data: any) {
   const ctx = await requireOrgContext()
@@ -24,6 +101,75 @@ export async function updateEmployee(id: string, data: any) {
 
   if (!EMPLOYEE_ROLES.has(data.role)) {
     return { error: "Employee Role ไม่ถูกต้อง" }
+  }
+
+  if (
+    !canAssignEmployeeRole(
+      ctx.role,
+      data.role
+    )
+  ) {
+    return {
+      error:
+        "เฉพาะ Owner เท่านั้นที่กำหนด Employee Admin ได้",
+    }
+  }
+
+  const authorityClient = createAdminClient()
+
+  const {
+    data: targetEmployee,
+    error: targetEmployeeError,
+  } = await authorityClient
+    .from("employees")
+    .select("id, user_id, role")
+    .eq("id", id)
+    .eq("org_id", ctx.orgId)
+    .maybeSingle()
+
+  if (targetEmployeeError || !targetEmployee) {
+    return {
+      error: "ไม่พบ Employee Record ในองค์กรนี้",
+    }
+  }
+
+  if (
+    !canAssignEmployeeRole(
+      ctx.role,
+      targetEmployee.role
+    )
+  ) {
+    return {
+      error:
+        "Admin ไม่สามารถจัดการ Employee Admin ได้",
+    }
+  }
+
+  if (targetEmployee.user_id) {
+    const {
+      data: targetMembership,
+      error: targetMembershipError,
+    } = await authorityClient
+      .from("memberships")
+      .select("role")
+      .eq("user_id", targetEmployee.user_id)
+      .eq("org_id", ctx.orgId)
+      .maybeSingle()
+
+    if (
+      targetMembershipError ||
+      !targetMembership ||
+      !canManageAccessTarget(
+        ctx.role,
+        targetMembership.role,
+        targetEmployee.role
+      )
+    ) {
+      return {
+        error:
+          "Admin ไม่สามารถจัดการสิทธิ์ของ Owner/Admin ได้",
+      }
+    }
   }
 
   const supabase = await createClient()
@@ -90,7 +236,7 @@ export async function linkEmployeeAccount(
 
   const { data: employee, error: employeeError } = await adminClient
     .from("employees")
-    .select("id, user_id")
+    .select("id, user_id, role")
     .eq("id", employeeId)
     .eq("org_id", ctx.orgId)
     .maybeSingle()
@@ -110,8 +256,21 @@ export async function linkEmployeeAccount(
     return { error: "บัญชีนี้ไม่ได้เป็นสมาชิกขององค์กรปัจจุบัน" }
   }
 
-  if (membership.role === "owner" && ctx.role !== "owner") {
-    return { error: "Admin ไม่สามารถจัดการบัญชี Owner ได้" }
+  if (
+    !canAssignEmployeeRole(
+      ctx.role,
+      employee.role
+    ) ||
+    !canManageAccessTarget(
+      ctx.role,
+      membership.role,
+      employee.role
+    )
+  ) {
+    return {
+      error:
+        "Admin ไม่สามารถผูกบัญชี Owner/Admin หรือ Employee Admin ได้",
+    }
   }
 
   if (employee.user_id && employee.user_id !== userId) {
@@ -167,7 +326,7 @@ export async function unlinkEmployeeAccount(employeeId: string) {
 
   const { data: employee, error: employeeError } = await adminClient
     .from("employees")
-    .select("id, user_id")
+    .select("id, user_id, role")
     .eq("id", employeeId)
     .eq("org_id", ctx.orgId)
     .maybeSingle()
@@ -187,8 +346,25 @@ export async function unlinkEmployeeAccount(employeeId: string) {
     .eq("org_id", ctx.orgId)
     .maybeSingle()
 
-  if (membership?.role === "owner" && ctx.role !== "owner") {
-    return { error: "Admin ไม่สามารถจัดการบัญชี Owner ได้" }
+  if (
+    ctx.role !== "owner" &&
+    (
+      !membership ||
+      !canAssignEmployeeRole(
+        ctx.role,
+        employee.role
+      ) ||
+      !canManageAccessTarget(
+        ctx.role,
+        membership.role,
+        employee.role
+      )
+    )
+  ) {
+    return {
+      error:
+        "Admin ไม่สามารถยกเลิกการผูก Owner/Admin หรือ Employee Admin ได้",
+    }
   }
 
   const { error } = await adminClient
@@ -217,6 +393,18 @@ export async function offboardEmployee(
     return {
       error:
         "ไม่มีสิทธิ์ในการปิดใช้งานพนักงาน",
+    }
+  }
+
+  const authority =
+    await validateEmployeeLifecycleAuthority(
+      ctx,
+      employeeId
+    )
+
+  if (authority.error) {
+    return {
+      error: authority.error,
     }
   }
 
@@ -282,6 +470,18 @@ export async function deleteEmployeePermanently(
   } catch {
     return {
       error: "ไม่มีสิทธิ์ในการลบพนักงาน",
+    }
+  }
+
+  const authority =
+    await validateEmployeeLifecycleAuthority(
+      ctx,
+      employeeId
+    )
+
+  if (authority.error) {
+    return {
+      error: authority.error,
     }
   }
 

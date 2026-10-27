@@ -28,7 +28,13 @@ const EmployeeInput = z.object({
 
 type EmployeeFormValues = z.infer<typeof EmployeeInput>
 
-export function EmployeeForm({ shifts = [] }: { shifts?: any[] }) {
+export function EmployeeForm({
+  shifts = [],
+  canGrantEmployeeAdmin = false,
+}: {
+  shifts?: any[]
+  canGrantEmployeeAdmin?: boolean
+}) {
   const [loading, setLoading] = useState(false)
   const submitLock = useRef(false)
   
@@ -84,7 +90,11 @@ export function EmployeeForm({ shifts = [] }: { shifts?: any[] }) {
             <option value="foreman">โฟร์แมน / หัวหน้างาน (Foreman)</option>
             <option value="manager">ผู้จัดการ (Manager)</option>
             <option value="executive">ผู้บริหาร (Executive)</option>
-            <option value="admin">แอดมินระบบฝ่ายงาน (Admin)</option>
+            {canGrantEmployeeAdmin && (
+              <option value="admin">
+                แอดมินระบบฝ่ายงาน (Admin)
+              </option>
+            )}
           </select>
         </div>
         <div className="space-y-2">
