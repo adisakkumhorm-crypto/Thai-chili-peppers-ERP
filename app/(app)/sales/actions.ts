@@ -10,6 +10,10 @@ import {
   executeSalesOrderCancelReservation,
   type SalesOrderCancelRpcClient,
 } from "@/lib/inventory/sales-order-cancel-capability"
+import {
+  executeSalesOrderShip,
+  type SalesOrderShipRpcClient,
+} from "@/lib/inventory/sales-order-ship-capability"
 import type { Enums } from "@/lib/types/database"
 
 const SalesOrderInput = z.object({
@@ -171,12 +175,22 @@ export async function updateOrderStatus(
   }
 
   if (status === "shipped") {
-    const { error: rpcError } = await (supabase as any).rpc('rpc_ship_sales_order', {
-      p_order_id: id,
-      p_user_id: ctx.userId,
-      p_org_id: ctx.orgId
-    })
-    if (rpcError) return { error: `Failed to ship order: ${rpcError.message || rpcError.details}` }
+    const result = await executeSalesOrderShip(
+      supabase as unknown as SalesOrderShipRpcClient,
+      {
+        actor: humanActorFromOrgContext(ctx),
+        correlationId: crypto.randomUUID(),
+      },
+      {
+        orderId: id,
+      }
+    )
+
+    if (result.error) {
+      return {
+        error: `Failed to ship order: ${result.error}`,
+      }
+    }
   } else if (status === "cancelled") {
     const result = await executeSalesOrderCancelReservation(
       supabase as unknown as SalesOrderCancelRpcClient,
