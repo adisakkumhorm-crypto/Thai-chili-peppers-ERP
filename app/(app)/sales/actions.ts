@@ -5,6 +5,11 @@ import { redirect } from "next/navigation"
 import { z } from "zod"
 import { createClient as createSupabaseClient } from "@/lib/supabase/server"
 import { requireOrgContext } from "@/lib/auth"
+import { humanActorFromOrgContext } from "@/lib/platform/actor-context"
+import {
+  executeSalesOrderCancelReservation,
+  type SalesOrderCancelRpcClient,
+} from "@/lib/inventory/sales-order-cancel-capability"
 import type { Enums } from "@/lib/types/database"
 
 const SalesOrderInput = z.object({
@@ -173,12 +178,22 @@ export async function updateOrderStatus(
     })
     if (rpcError) return { error: `Failed to ship order: ${rpcError.message || rpcError.details}` }
   } else if (status === "cancelled") {
-    const { error: rpcError } = await (supabase as any).rpc('rpc_cancel_sales_order_reservation', {
-      p_order_id: id,
-      p_user_id: ctx.userId,
-      p_org_id: ctx.orgId
-    })
-    if (rpcError) return { error: `Failed to cancel order: ${rpcError.message || rpcError.details}` }
+    const result = await executeSalesOrderCancelReservation(
+      supabase as unknown as SalesOrderCancelRpcClient,
+      {
+        actor: humanActorFromOrgContext(ctx),
+        correlationId: crypto.randomUUID(),
+      },
+      {
+        orderId: id,
+      }
+    )
+
+    if (result.error) {
+      return {
+        error: `Failed to cancel order: ${result.error}`,
+      }
+    }
   } else {
     updates.status = status
   }
