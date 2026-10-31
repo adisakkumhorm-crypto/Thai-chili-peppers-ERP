@@ -8,6 +8,11 @@ import {
   executeDirectIssueStock,
   type DirectIssueRpcClient,
 } from "@/lib/inventory/direct-issue-capability"
+
+import {
+  executeDirectTransferStock,
+  type DirectTransferRpcClient,
+} from "@/lib/inventory/direct-transfer-capability"
 import {
   executeDirectReceiveStock,
   type DirectReceiveRpcClient,
@@ -101,23 +106,30 @@ export async function processInventoryTransaction(
     if (!to_location_id) {
       return { error: "Destination location is required for transfer" }
     }
-    const key = idempotency_key || crypto.randomUUID();
-    
-    const { error: rpcError } = await (supabase as any).rpc('rpc_transfer_stock', {
-      p_org_id: ctx.orgId,
-      p_product_id: product_id,
-      p_from_location_id: location_id,
-      p_to_location_id: to_location_id,
-      p_quantity: quantity,
-      p_reference_no: reference_no || null,
-      p_idempotency_key: key,
-      p_user_id: ctx.userId
-    });
 
-    if (rpcError) {
-      return { error: rpcError.message || rpcError.details || "Unknown error" }
+    const key = idempotency_key || crypto.randomUUID()
+
+    const result = await executeDirectTransferStock(
+      supabase as unknown as DirectTransferRpcClient,
+      {
+        actor: humanActorFromOrgContext(ctx),
+        correlationId: crypto.randomUUID(),
+        idempotencyKey: key,
+      },
+      {
+        productId: product_id,
+        fromLocationId: location_id,
+        toLocationId: to_location_id,
+        quantity,
+        referenceNo: reference_no || null,
+        idempotencyKey: key,
+      }
+    )
+
+    if (result.error) {
+      return result
     }
-    
+
     revalidatePath("/inventory")
     return {}
   }
