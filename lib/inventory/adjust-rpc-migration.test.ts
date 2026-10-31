@@ -77,6 +77,21 @@ describe("MOD-001 I-5 adjust RPC migration contract", () => {
     )
   })
 
+  it("consumes the exact remaining book value on full depletion", () => {
+    expect(compact).toContain(
+      "IF v_new_total_qty = 0 THEN"
+    )
+    expect(compact).toContain(
+      "v_tx_total_cost := COALESCE(v_product.total_inventory_value, 0)"
+    )
+    expect(compact).toContain(
+      "v_new_avg_cost := 0"
+    )
+    expect(compact).toContain(
+      "v_new_total_value := 0"
+    )
+  })
+
   it("uses the product cost-readonly bypass and resets it", () => {
     expect(compact).toContain(
       "PERFORM set_config( 'app.bypass_cost_readonly', 'true', true )"

@@ -215,6 +215,11 @@ BEGIN
     ELSE
 
         IF v_new_total_qty = 0 THEN
+            -- Consume the exact remaining company-wide book value on final
+            -- depletion so transaction valuation reconciles without a
+            -- rounding residue (same convention as rpc_issue_stock).
+            v_tx_total_cost :=
+                COALESCE(v_product.total_inventory_value, 0);
             v_new_avg_cost := 0;
             v_new_total_value := 0;
         ELSE
