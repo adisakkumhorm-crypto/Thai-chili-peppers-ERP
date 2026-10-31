@@ -3,6 +3,11 @@ import { revalidatePath } from "next/cache"
 import { z } from "zod"
 import { createClient as createSupabaseClient } from "@/lib/supabase/server"
 import { requireOrgContext } from "@/lib/auth"
+import { humanActorFromOrgContext } from "@/lib/platform/actor-context"
+import {
+  executeDirectReceiveStock,
+  type DirectReceiveRpcClient,
+} from "@/lib/inventory/direct-receive-capability"
 import type { Enums } from "@/lib/types/database"
 
 const TransactionInput = z.object({
@@ -31,24 +36,31 @@ export async function processInventoryTransaction(
     if (unit_cost === undefined || unit_cost === null || unit_cost < 0) {
       return { error: "Unit cost is required and cannot be negative for receiving" }
     }
-    const key = idempotency_key || crypto.randomUUID();
-    
-    const { error: rpcError } = await (supabase as any).rpc('rpc_receive_stock_direct', {
-      p_org_id: ctx.orgId,
-      p_location_id: location_id,
-      p_product_id: product_id,
-      p_quantity: quantity,
-      p_unit_cost: unit_cost,
-      p_reference_no: reference_no || null,
-      p_batch_qr_code: batch_qr_code || null,
-      p_idempotency_key: key,
-      p_user_id: ctx.userId
-    });
 
-    if (rpcError) {
-      return { error: rpcError.message || rpcError.details || "Unknown error" }
+    const key = idempotency_key || crypto.randomUUID()
+
+    const result = await executeDirectReceiveStock(
+      supabase as unknown as DirectReceiveRpcClient,
+      {
+        actor: humanActorFromOrgContext(ctx),
+        correlationId: crypto.randomUUID(),
+        idempotencyKey: key,
+      },
+      {
+        productId: product_id,
+        locationId: location_id,
+        quantity,
+        unitCost: unit_cost,
+        referenceNo: reference_no || null,
+        batchQrCode: batch_qr_code || null,
+        idempotencyKey: key,
+      }
+    )
+
+    if (result.error) {
+      return result
     }
-    
+
     revalidatePath("/inventory")
     return {}
   }
