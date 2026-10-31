@@ -6,6 +6,11 @@ import { z } from "zod"
 
 import { createClient as createSupabaseClient } from "@/lib/supabase/server"
 import { requireOrgContext } from "@/lib/auth"
+import { humanActorFromOrgContext } from "@/lib/platform/actor-context"
+import {
+  executePurchaseOrderReceive,
+  type PurchaseOrderReceiveRpcClient,
+} from "@/lib/inventory/purchase-order-receive-capability"
 
 const POInput = z.object({
   supplier_id: z.string().uuid(),
@@ -210,18 +215,26 @@ export async function receivePOItems(
       throw new Error("No items to receive")
     }
 
-    // Call the RPC for atomic transaction
-    const { error: rpcError } = await (supabase.rpc as any)('rpc_receive_po_items', {
-      p_po_id: poId,
-      p_location_id: locationId,
-      p_org_id: ctx.orgId,
-      p_user_id: authUser.user.id,
-      p_items: itemsToReceive,
-      p_idempotency_key: idempotencyKey
-    })
+    const result = await executePurchaseOrderReceive(
+      supabase as unknown as PurchaseOrderReceiveRpcClient,
+      {
+        actor: {
+          ...humanActorFromOrgContext(ctx),
+          userId: authUser.user.id,
+        },
+        correlationId: crypto.randomUUID(),
+        idempotencyKey,
+      },
+      {
+        poId,
+        locationId,
+        items: itemsToReceive,
+        idempotencyKey,
+      }
+    )
 
-    if (rpcError) {
-      throw new Error(rpcError.message)
+    if (result.error) {
+      throw new Error(result.error)
     }
 
     revalidatePath("/purchases")
