@@ -5,6 +5,10 @@ import { createClient as createSupabaseClient } from "@/lib/supabase/server"
 import { requireOrgContext } from "@/lib/auth"
 import { humanActorFromOrgContext } from "@/lib/platform/actor-context"
 import {
+  executeDirectIssueStock,
+  type DirectIssueRpcClient,
+} from "@/lib/inventory/direct-issue-capability"
+import {
   executeDirectReceiveStock,
   type DirectReceiveRpcClient,
 } from "@/lib/inventory/direct-receive-capability"
@@ -66,25 +70,29 @@ export async function processInventoryTransaction(
   }
 
   if (transaction_type === "issue") {
-    const issueQty = Math.abs(quantity);
-    const key = idempotency_key || crypto.randomUUID();
-    
-    const { error: rpcError } = await (supabase as any).rpc('rpc_issue_stock', {
-      p_org_id: ctx.orgId,
-      p_mode: 'DIRECT',
-      p_quantity: issueQty,
-      p_idempotency_key: key,
-      p_user_id: ctx.userId,
-      p_product_id: product_id,
-      p_location_id: location_id,
-      p_reference_no: reference_no || null,
-      p_sales_order_item_id: null
-    });
+    const issueQty = Math.abs(quantity)
+    const key = idempotency_key || crypto.randomUUID()
 
-    if (rpcError) {
-      return { error: rpcError.message || rpcError.details || "Unknown error" }
+    const result = await executeDirectIssueStock(
+      supabase as unknown as DirectIssueRpcClient,
+      {
+        actor: humanActorFromOrgContext(ctx),
+        correlationId: crypto.randomUUID(),
+        idempotencyKey: key,
+      },
+      {
+        productId: product_id,
+        locationId: location_id,
+        quantity: issueQty,
+        referenceNo: reference_no || null,
+        idempotencyKey: key,
+      }
+    )
+
+    if (result.error) {
+      return result
     }
-    
+
     revalidatePath("/inventory")
     return {}
   }
