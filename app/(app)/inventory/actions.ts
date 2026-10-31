@@ -17,6 +17,10 @@ import {
   executeDirectReceiveStock,
   type DirectReceiveRpcClient,
 } from "@/lib/inventory/direct-receive-capability"
+import {
+  executeDirectAdjustStock,
+  type DirectAdjustRpcClient,
+} from "@/lib/inventory/direct-adjust-capability"
 import type { Enums } from "@/lib/types/database"
 
 const TransactionInput = z.object({
@@ -135,36 +139,47 @@ export async function processInventoryTransaction(
   }
 
   if (transaction_type === "adjust") {
-    // Validate and process adjust
     if (quantity === 0) {
       return { error: "Quantity cannot be zero for adjustment" }
     }
-    
-    const key = idempotency_key || crypto.randomUUID();
-    
-    // For positive adjustment, unit_cost is required and must be non-negative
+
+    const key = idempotency_key || crypto.randomUUID()
+
     if (quantity > 0) {
-      if (unit_cost === undefined || unit_cost === null || unit_cost < 0) {
-        return { error: "Unit cost is required and cannot be negative for positive adjustment" }
+      if (
+        unit_cost === undefined ||
+        unit_cost === null ||
+        unit_cost < 0
+      ) {
+        return {
+          error:
+            "Unit cost is required and cannot be negative for positive adjustment",
+        }
       }
     }
-    
-    const { error: rpcError } = await (supabase as any).rpc('rpc_adjust_stock', {
-      p_org_id: ctx.orgId,
-      p_product_id: product_id,
-      p_location_id: location_id,
-      p_quantity: quantity,
-      p_unit_cost: unit_cost,
-      p_reference_no: reference_no || null,
-      p_reason: batch_qr_code || null,
-      p_idempotency_key: key,
-      p_user_id: ctx.userId
-    });
 
-    if (rpcError) {
-      return { error: rpcError.message || rpcError.details || "Unknown error" }
+    const result = await executeDirectAdjustStock(
+      supabase as unknown as DirectAdjustRpcClient,
+      {
+        actor: humanActorFromOrgContext(ctx),
+        correlationId: crypto.randomUUID(),
+        idempotencyKey: key,
+      },
+      {
+        productId: product_id,
+        locationId: location_id,
+        quantity,
+        unitCost: unit_cost,
+        referenceNo: reference_no || null,
+        batchQrCode: batch_qr_code || null,
+        idempotencyKey: key,
+      }
+    )
+
+    if (result.error) {
+      return result
     }
-    
+
     revalidatePath("/inventory")
     return {}
   }
