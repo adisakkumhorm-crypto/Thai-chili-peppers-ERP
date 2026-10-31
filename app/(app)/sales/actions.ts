@@ -11,6 +11,10 @@ import {
   type SalesOrderCancelRpcClient,
 } from "@/lib/inventory/sales-order-cancel-capability"
 import {
+  executeSalesOrderItemReserve,
+  type SalesOrderItemReserveRpcClient,
+} from "@/lib/inventory/sales-order-item-reserve-capability"
+import {
   executeSalesOrderShip,
   type SalesOrderShipRpcClient,
 } from "@/lib/inventory/sales-order-ship-capability"
@@ -92,17 +96,26 @@ export async function addOrderItem(input: z.infer<typeof OrderItemInput>): Promi
   if (!parsed.success) return { error: "Invalid input" }
 
   const supabase = await createSupabaseClient()
-  
-  const { error } = await (supabase.rpc as any)('rpc_reserve_so_item', {
-    p_order_id: parsed.data.order_id,
-    p_product_id: parsed.data.product_id,
-    p_location_id: parsed.data.location_id,
-    p_quantity: parsed.data.quantity,
-    p_unit_price: parsed.data.unit_price,
-    p_org_id: ctx.orgId
-  })
 
-  if (error) return { error: error.message }
+  const result =
+    await executeSalesOrderItemReserve(
+      supabase as unknown as SalesOrderItemReserveRpcClient,
+      {
+        actor: humanActorFromOrgContext(ctx),
+        correlationId: crypto.randomUUID(),
+      },
+      {
+        orderId: parsed.data.order_id,
+        productId: parsed.data.product_id,
+        locationId: parsed.data.location_id,
+        quantity: parsed.data.quantity,
+        unitPrice: parsed.data.unit_price,
+      }
+    )
+
+  if (result.error) {
+    return { error: result.error }
+  }
 
   // Total is updated by RPC
   revalidatePath(`/sales/${parsed.data.order_id}`)
