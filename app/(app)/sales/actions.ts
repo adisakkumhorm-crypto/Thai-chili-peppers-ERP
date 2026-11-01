@@ -15,6 +15,10 @@ import {
   type SalesOrderItemReserveRpcClient,
 } from "@/lib/inventory/sales-order-item-reserve-capability"
 import {
+  executeSalesOrderItemDelete,
+  type SalesOrderItemDeleteRpcClient,
+} from "@/lib/inventory/sales-order-item-delete-capability"
+import {
   executeSalesOrderShip,
   type SalesOrderShipRpcClient,
 } from "@/lib/inventory/sales-order-ship-capability"
@@ -125,13 +129,22 @@ export async function addOrderItem(input: z.infer<typeof OrderItemInput>): Promi
 export async function deleteOrderItem(itemId: string, orderId: string, productId: string, qty: number): Promise<{ error?: string }> {
   const ctx = await requireOrgContext()
   const supabase = await createSupabaseClient()
-  
-  const { error } = await (supabase.rpc as any)('rpc_delete_so_item', {
-    p_item_id: itemId,
-    p_org_id: ctx.orgId
-  })
 
-  if (error) return { error: error.message }
+  const result =
+    await executeSalesOrderItemDelete(
+      supabase as unknown as SalesOrderItemDeleteRpcClient,
+      {
+        actor: humanActorFromOrgContext(ctx),
+        correlationId: crypto.randomUUID(),
+      },
+      {
+        itemId,
+      }
+    )
+
+  if (result.error) {
+    return { error: result.error }
+  }
 
   // Total is updated by RPC
   revalidatePath(`/sales/${orderId}`)
