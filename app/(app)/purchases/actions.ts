@@ -69,6 +69,12 @@ export async function updatePOStatus(
     return { error: "PO status cannot be set to 'received' directly. Use receivePOItems instead." }
   }
 
+  if (status === "ordered") {
+    return {
+      error: "PO status cannot be set to 'ordered' directly. Use approvePO instead.",
+    }
+  }
+
   const ctx = await requireOrgContext()
   const supabase = await createSupabaseClient()
   
@@ -121,8 +127,10 @@ export async function addPOItem(
     .eq("org_id", ctx.orgId)
     .single()
 
-  if (po?.status === "received" || po?.status === "cancelled") {
-    return { error: "Cannot modify items for this PO status" }
+  if (po?.status !== "draft") {
+    return {
+      error: "PO items can only be modified while the PO is in draft status",
+    }
   }
 
   const { error } = await supabase.from("purchase_order_items").insert({
@@ -155,8 +163,10 @@ export async function deletePOItem(
     .eq("org_id", ctx.orgId)
     .single()
 
-  if (po?.status === "received" || po?.status === "cancelled") {
-    return { error: "Cannot modify items for this PO status" }
+  if (po?.status !== "draft") {
+    return {
+      error: "PO items can only be modified while the PO is in draft status",
+    }
   }
 
   const { error } = await supabase
@@ -181,6 +191,27 @@ export async function updatePO(
   if (!parsed.success) return { error: "Invalid input" }
 
   const supabase = await createSupabaseClient()
+
+  const { data: po, error: poError } = await supabase
+    .from("purchase_orders")
+    .select("status")
+    .eq("id", id)
+    .eq("org_id", ctx.orgId)
+    .single()
+
+  if (poError || !po) {
+    return {
+      error: poError?.message || "Purchase order not found",
+    }
+  }
+
+  if (po.status !== "draft") {
+    return {
+      error:
+        "Purchase order details can only be modified while the PO is in draft status",
+    }
+  }
+
   const { error } = await supabase
     .from("purchase_orders")
     .update({
@@ -286,38 +317,45 @@ export async function createCostFromPO(poId: string): Promise<{ costId?: string;
   return { costId: costId ?? p_id }
 }
 
-export async function requestPOApproval(id: string): Promise<{ error?: string }> {
+export async function requestPOApproval(
+  id: string
+): Promise<{ error?: string }> {
   const ctx = await requireOrgContext()
   const supabase = await createSupabaseClient()
+
+  // Database trigger owns requested_by and total_amount.
   const { error } = await supabase
     .from("purchase_orders")
-    .update({ 
-      status: "pending_approval", 
-      requested_by: ctx.userId 
+    .update({
+      status: "pending_approval",
     })
     .eq("id", id)
     .eq("org_id", ctx.orgId)
-    
+
   if (error) return { error: error.message }
+
   revalidatePath(`/purchases/${id}`)
   return {}
 }
 
-export async function approvePO(id: string): Promise<{ error?: string }> {
+export async function approvePO(
+  id: string
+): Promise<{ error?: string }> {
   const ctx = await requireOrgContext()
   const supabase = await createSupabaseClient()
-  
+
+  // Database trigger validates authorization and owns
+  // approved_by / approved_at.
   const { error } = await supabase
     .from("purchase_orders")
-    .update({ 
-      status: "ordered", 
-      approved_by: ctx.userId,
-      approved_at: new Date().toISOString()
+    .update({
+      status: "ordered",
     })
     .eq("id", id)
     .eq("org_id", ctx.orgId)
-    
+
   if (error) return { error: error.message }
+
   revalidatePath("/purchases")
   revalidatePath(`/purchases/${id}`)
   return {}

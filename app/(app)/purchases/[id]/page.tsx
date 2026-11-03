@@ -57,7 +57,7 @@ export default async function PODetailPage({
 
   if (!po) notFound()
 
-  const isEditable = po.status !== "received" && po.status !== "cancelled"
+  const isEditable = po.status === "draft"
 
   return (
     <div className="space-y-6">
