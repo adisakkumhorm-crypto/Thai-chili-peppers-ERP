@@ -6,6 +6,7 @@ import { z } from "zod"
 
 import { createClient as createSupabaseClient } from "@/lib/supabase/server"
 import { requireOrgContext } from "@/lib/auth"
+import { bahtToSatang } from "@/lib/money"
 import { humanActorFromOrgContext } from "@/lib/platform/actor-context"
 import {
   executePurchaseOrderReceive,
@@ -261,29 +262,28 @@ export async function createCostFromPO(poId: string): Promise<{ costId?: string;
     return { error: poError?.message || "Purchase order not found" }
   }
 
-  // 2. Create cost record
-  const { data: cost, error: costError } = await supabase
-    .from("costs")
-    .insert({
-      org_id: ctx.orgId,
-      po_id: po.id,
-      supplier_id: po.supplier_id,
-      category: "other",
-      subtotal_satang: po.total_amount * 100, // Assuming total_amount is in Baht
-      vat_amount_satang: 0,
-      wht_amount_satang: 0,
-      amount_satang: po.total_amount * 100,
-      vendor: (po.suppliers as any)?.name || "Unknown Supplier",
-      notes: `Generated from PO: ${po.po_number}`,
-    })
-    .select("id")
-    .single()
+  // 2. Create the cost and accounting journal atomically via the hardened finance RPC
+  const amount_satang = bahtToSatang(Number(po.total_amount))
+  const p_id = crypto.randomUUID()
+  const { data: costId, error: costError } = await supabase.rpc("rpc_create_cost", {
+    p_id,
+    p_org_id: ctx.orgId,
+    p_category: "other",
+    p_subtotal_satang: amount_satang,
+    p_vat_amount_satang: 0,
+    p_wht_amount_satang: 0,
+    p_amount_satang: amount_satang,
+    p_po_id: po.id,
+    p_supplier_id: po.supplier_id ?? undefined,
+    p_vendor: (po.suppliers as any)?.name || "Unknown Supplier",
+    p_notes: `Generated from PO: ${po.po_number}`,
+  })
 
   if (costError) {
     return { error: costError.message }
   }
 
-  return { costId: cost.id }
+  return { costId: costId ?? p_id }
 }
 
 export async function requestPOApproval(id: string): Promise<{ error?: string }> {
